@@ -284,16 +284,28 @@ body {
   border: none;
   border-radius: 30px;
   font-size: 1rem;
-  background: rgba(255, 255, 255, 0.1);
+  background: #0e5a50; /* Alterado */
   color: var(--text-color);
+  box-shadow: var(--shadow);
+  transition: all 0.3s ease;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.9rem 1.5rem;
+  border: none;
+  border-radius: 30px;
+  font-size: 1rem;
+  background: #0e5a50; /* Alterado para a cor de fundo da barra de tarefas */
+  color: var(--text-color); /* Mantido, assumindo que var(--text-color) é branco ou claro */
   box-shadow: var(--shadow);
   transition: all 0.3s ease;
 }
 
 .search-input:focus {
   outline: none;
-  box-shadow: 0 0 0 4px rgba(27, 160, 152, 0.3);
-  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 0 4px rgba(27, 160, 152, 0.3); /* Mantém o foco com a cor primária */
+  background: #0e5a50; /* Mantém a cor de fundo no foco */
 }
 
 .search-bar i {
@@ -606,37 +618,47 @@ body {
   background: var(--error-color);
 }
 
-.tooltip {
-  position: relative;
-}
 
-.tooltip a {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-}
 
 .tooltip::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: 100%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(10px); /* Ajusta a posição para baixo */
   background: var(--secondary-color);
   color: var(--text-color);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.9rem;
-  white-space: nowrap;
+  white-space: normal; /* Permite que o texto quebre em várias linhas */
+  width: 300px; /* Largura fixa ajustada */
+  max-width: 120px; /* Largura máxima */
+  max-height: 200px; /* Limita a altura máxima para evitar overflow */
+  overflow-y: auto; /* Adiciona rolagem vertical se necessário */
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
   box-shadow: var(--shadow);
+  z-index: 1010;
 }
 
 .tooltip:hover::after {
   opacity: 1;
+}
+
+/* Ajusta para aparecer acima se não houver espaço abaixo */
+@media (max-height: 400px) {
+  .tooltip::after {
+    top: auto;
+    bottom: 100%;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  .tooltip:hover::after {
+    transform: translateX(-50%) translateY(-10px);
+  }
+}
+
+/* Remove o tooltip dos links dentro do bottom-nav */
+.bottom-nav .tooltip::after {
+  display: none;
 }
 
 .theme-toggle,

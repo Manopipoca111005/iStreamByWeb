@@ -14,7 +14,6 @@
     <meta name="author" content="iStreamByWeb" />
     <title>iStreamByWeb - Home</title>
     <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
@@ -22,7 +21,7 @@
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     />
-    <link rel="stylesheet" href="/css/home.css" />
+    <link rel="stylesheet" href="../css/home.css" />
   </head>
   <body>
     <button class="hamburger" aria-label="Toggle sidebar">
@@ -35,11 +34,11 @@
         <button class="theme-toggle tooltip" data-tooltip="Toggle Theme">
           <i class="fas fa-moon"></i>
         </button>
-        <button class="help-button tooltip" data-tooltip="How to Use">
+        <button class="help-button tooltip" data-tooltip="How to Use" >
           <i class="fas fa-question-circle"></i>
         </button>
         <div class="user-profile">
-          <i class="fas fa-user-circle tooltip" data-tooltip="Profile"></i>
+          <i class="fas fa-user-circle tooltip"></i>
           <div class="profile-dropdown">
             <a href="/profile">Profile</a>
             <a href="/settings">Settings</a>
@@ -52,7 +51,6 @@
     <div class="sidebar">
       <div
         class="sidebar-item active tooltip"
-        data-tooltip="Home"
         style="--i: 1"
       >
         <a href="home.html">
@@ -60,7 +58,7 @@
           <div class="sidebar-label">Home</div>
         </a>
       </div>
-      <div class="sidebar-item tooltip" data-tooltip="Discover" style="--i: 2">
+      <div class="sidebar-item tooltip"  style="--i: 2">
         <a href="discover.html">
           <div class="sidebar-icon"><i class="fas fa-search"></i></div>
           <div class="sidebar-label">Discover</div>
@@ -68,7 +66,6 @@
       </div>
       <div
         class="sidebar-item tooltip"
-        data-tooltip="Watch Later"
         style="--i: 3"
       >
         <a href="watch_later.html">
@@ -76,7 +73,7 @@
           <div class="sidebar-label">Watch Later</div>
         </a>
       </div>
-      <div class="sidebar-item tooltip" data-tooltip="Settings" style="--i: 4">
+      <div class="sidebar-item tooltip" style="--i: 4">
         <a href="settings.html">
           <div class="sidebar-icon"><i class="fas fa-cog"></i></div>
           <div class="sidebar-label">Settings</div>
@@ -96,15 +93,16 @@
         </button>
       </section>
 
-      <div class="search-bar">
-        <input
-          type="text"
-          class="search-input"
-          placeholder="Search movies, series, or paste a link"
-          aria-label="Search"
-        />
-        <i class="fas fa-search"></i>
-      </div>
+<div class="search-bar">
+  <input
+    type="text"
+    class="search-input"
+    id="search-input"
+    placeholder="Search for a movie or series..."
+    aria-label="Search movies and series"
+  />
+  <i class="fas fa-search"></i>
+</div>
 
       <div class="section" style="--i: 1">
         <div class="section-title">

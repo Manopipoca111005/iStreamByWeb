@@ -21,7 +21,6 @@
   from {
     opacity: 0;
   }
-
   to {
     opacity: 1;
   }
@@ -32,7 +31,6 @@
     transform: translateX(-20px);
     opacity: 0;
   }
-
   to {
     transform: translateX(0);
     opacity: 1;
@@ -58,21 +56,7 @@
   background: var(--error-color, #d32f2f);
 }
 
-.tooltip {
-  position: relative;
-}
-
-.tooltip a {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-}
-
 .tooltip::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
   background: #333;
@@ -109,7 +93,6 @@
   0% {
     transform: rotate(0deg);
   }
-
   100% {
     transform: rotate(360deg);
   }
@@ -138,11 +121,9 @@
     transform: translateX(-100%);
     transition: transform 0.3s ease;
   }
-
   .sidebar.active {
     transform: translateX(0);
   }
-
   .hamburger {
     display: block;
   }
@@ -178,13 +159,8 @@ a {
 
 .sidebar {
   width: 80px;
-  background: linear-gradient(
-    to bottom,
-    var(--secondary-color),
-    var(--accent-color)
-  );
+  background: linear-gradient(to bottom, var(--secondary-color), var(--accent-color));
   padding: 0.5rem 0.5rem 0 0.5rem;
-
   position: fixed;
   height: 100vh;
   transition: transform 0.3s ease;
@@ -194,6 +170,7 @@ a {
   flex-direction: column;
   align-items: center;
   gap: 2rem;
+  justify-content: center; /* Adicionado para centralizar verticalmente os itens */
 }
 
 .sidebar-item {
@@ -203,6 +180,10 @@ a {
   transition: all 0.3s ease;
   animation: fireworkItem 0.7s ease-out forwards;
   animation-delay: calc(0.1s * var(--i));
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centraliza horizontalmente o ícone e o texto */
+  text-align: center; /* Garante que o texto fique centralizado */
 }
 .sidebar-item:hover,
 .sidebar-item.active {
@@ -213,15 +194,17 @@ a {
 .sidebar-icon {
   font-size: 1.8rem;
   color: var(--text-color);
+  margin-bottom: 0.25rem; /* Pequeno espaço entre ícone e texto */
 }
 
 .sidebar-label {
   font-size: 0.8rem;
-  margin-top: 0.5rem;
+  margin-top: 0;
   color: var(--text-color);
-  text-align: center;
   font-weight: 500;
+  white-space: nowrap; /* Evita que o texto quebre em várias linhas */
 }
+
 .main {
   margin-left: 100px;
   padding: 100px 2rem 2rem;
@@ -230,6 +213,7 @@ a {
   border-radius: 20px 0 0 20px;
   animation: explodeInMain 0.8s ease-out;
 }
+
 .main-content {
   flex: 1;
   margin-left: 140px;
@@ -324,7 +308,6 @@ a {
     opacity: 0;
     transform: translateY(10px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
@@ -485,11 +468,9 @@ a {
   0% {
     transform: scale(1);
   }
-
   50% {
     transform: scale(1.2);
   }
-
   100% {
     transform: scale(1);
   }
@@ -652,16 +633,13 @@ input:checked + .slider:before {
     margin-left: 0;
     border-radius: 0;
   }
-
   .sidebar {
     width: 80px;
     gap: 30px;
   }
-
   .search-container {
     left: 100px;
   }
-
   .settings-menu {
     width: 180px;
   }
@@ -669,24 +647,24 @@ input:checked + .slider:before {
 
 @media (max-width: 768px) {
   .sidebar {
-    display: none;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
   }
-
+  .sidebar.active {
+    transform: translateX(0);
+  }
   .main-content {
     padding: 20px;
   }
-
   .search-container {
     left: 20px;
     right: 20px;
     top: 10px;
   }
-
   .settings-menu {
     width: 100%;
     margin-top: 80px;
   }
-
   .content-area {
     margin-top: 160px;
   }
@@ -696,15 +674,12 @@ input:checked + .slider:before {
   .main-content {
     padding: 15px;
   }
-
   .settings-menu {
     gap: 10px;
   }
-
   .menu-item {
     padding: 0.75rem 1rem;
   }
-
   .general-content,
   .player-content,
   .streaming-content,

@@ -2,7 +2,7 @@
   --primary-color: #1ba098;
   --secondary-color: #00332c;
   --accent-color: #0e5a50;
-  --text-color: #ffffff;
+  --text-color: white;
   --bg-color: #f5f7fa;
   --shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
   --success-color: #2e7d32;
@@ -95,10 +95,11 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  color: white;
 }
 
 .logo i {
-  color: var(--primary-color);
+  color: white;
   animation: sparkle 1.5s infinite;
 }
 
@@ -127,6 +128,7 @@ body {
   font-size: 1.8rem;
   cursor: pointer;
   transition: transform 0.3s ease;
+  color: white;
 }
 
 .user-profile .fa-user-circle:hover {
@@ -231,13 +233,13 @@ body {
 
 .sidebar-icon {
   font-size: 1.8rem;
-  color: var(--text-color);
+  color: white;
 }
 
 .sidebar-label {
   font-size: 0.8rem;
   margin-top: 0.5rem;
-  color: var(--text-color);
+  color: white;
   text-align: center;
   font-weight: 500;
 }
@@ -278,6 +280,11 @@ body {
   position: relative;
   overflow: hidden;
   animation: zoomInHero 1s ease-out;
+}
+
+.hero-banner h1,
+.hero-banner p {
+  color: #ffffff; /* Adicionado */
 }
 
 .hero-banner::before {
@@ -356,12 +363,13 @@ body {
   color: var(--text-color);
   box-shadow: var(--shadow);
   transition: all 0.3s ease;
+  background: #0e5a50;
 }
 
 .search-input:focus {
   outline: none;
   box-shadow: 0 0 0 4px rgba(27, 160, 152, 0.3);
-  background: rgba(255, 255, 255, 0.2);
+  background: #0e5a50;
 }
 
 .search-bar i {
@@ -400,7 +408,7 @@ body {
   padding: 0.6rem 1.2rem;
   border: none;
   background: var(--primary-color);
-  color: var(--text-color);
+  color: white;
   border-radius: 25px;
   cursor: pointer;
   font-weight: 500;
@@ -612,43 +620,46 @@ body {
   }
 }
 
-.tooltip {
-  position: relative;
-}
-
-.tooltip a {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-}
-
 .tooltip::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: 100%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(10px); /* Ajusta a posição para baixo */
   background: var(--secondary-color);
   color: var(--text-color);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.9rem;
-  white-space: nowrap;
+  white-space: normal; /* Permite que o texto quebre em várias linhas */
+  min-width: 100px; /* Largura mínima */
+  max-width: 120px; /* Largura máxima */
+  max-height: 200px; /* Limita a altura máxima para evitar overflow */
+  overflow-y: auto; /* Adiciona rolagem vertical se necessário */
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
   box-shadow: var(--shadow);
+  z-index: 1010;
 }
 
 .tooltip:hover::after {
   opacity: 1;
 }
 
+/* Ajusta para aparecer acima se não houver espaço abaixo */
+@media (max-height: 400px) {
+  .tooltip::after {
+    top: auto;
+    bottom: 100%;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  .tooltip:hover::after {
+    transform: translateX(-50%) translateY(-10px);
+  }
+}
+
 .theme-toggle,
 .help-button {
   background: var(--accent-color);
-  color: var(--text-color);
+  color: white;
   border: none;
   padding: 12px;
   border-radius: 50%;
@@ -886,10 +897,7 @@ body {
   transition: all 0.3s ease;
 }
 
-.bottom-nav a.active {
-  color: var(--primary-color);
-  transform: scale(1.2);
-}
+
 
 .nav-icon {
   font-size: 1.6rem;
@@ -919,6 +927,7 @@ body {
 
 .footer p {
   margin-bottom: 1rem;
+  color: white;
 }
 
 .footer a {
@@ -928,7 +937,7 @@ body {
 }
 
 .footer a:hover {
-  color: var(--accent-color);
+  color: wheat;
 }
 
 @media (max-width: 768px) {
@@ -968,10 +977,12 @@ body {
 
   .hero-banner h1 {
     font-size: 1.8rem;
+    color: white;
   }
 
   .hero-banner p {
     font-size: 1rem;
+    color: white;
   }
 }
 

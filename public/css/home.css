@@ -2,7 +2,7 @@
   --primary-color: #1ba098;
   --secondary-color: #00332c;
   --accent-color: #0e5a50;
-  --text-color: #ffffff;
+  --text-color: white;
   --bg-color: #f5f7fa;
   --shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
   --success-color: #2e7d32;
@@ -71,6 +71,7 @@ body {
   gap: 20px;
   position: relative;
   z-index: 1001;
+  color: white;
 }
 
 @keyframes glowHeader {
@@ -88,14 +89,14 @@ body {
 .logo {
   font-size: 1.8rem;
   font-weight: 700;
-  color: var(--text-color);
+  color: white;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .logo i {
-  color: var(--primary-color);
+  color: white;
   animation: sparkle 1.5s infinite;
 }
 
@@ -139,7 +140,8 @@ body {
   display: none;
   position: absolute;
   top: 120%;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   background: var(--secondary-color, #222);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.2);
@@ -154,7 +156,7 @@ body {
 .profile-dropdown a {
   display: block;
   padding: 0.75rem 1rem;
-  color: var(--text-color);
+  color: white;
   text-decoration: none;
   transition: background 0.2s ease;
 }
@@ -236,13 +238,13 @@ body {
 
 .sidebar-icon {
   font-size: 1.8rem;
-  color: var(--text-color);
+  color: white
 }
 
 .sidebar-label {
   font-size: 0.8rem;
   margin-top: 0.5rem;
-  color: var(--text-color);
+  color: white;
   font-weight: 500;
 }
 
@@ -277,9 +279,9 @@ body {
   background-size: cover;
   background-position: center;
   border-radius: 15px;
-  padding: 3rem;
+  padding: 2rem;
   color: var(--text-color);
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   position: relative;
   overflow: hidden;
   animation: zoomInHero 1s ease-out;
@@ -327,6 +329,7 @@ body {
 .hero-banner h1 {
   font-size: 2.5rem;
   margin-bottom: 1rem;
+  color: white;
 }
 
 .hero-banner p {
@@ -335,7 +338,7 @@ body {
 
 .hero-banner .hero-button {
   background: var(--primary-color);
-  color: var(--text-color);
+  color: white;
   border: none;
   padding: 0.8rem 1.5rem;
   border-radius: 25px;
@@ -353,12 +356,7 @@ body {
 }
 
 
-.search-bar {
-  position: relative;
-  margin-bottom: 2rem;
-  max-width: 600px;
-  animation: slideInSearch 0.6s ease-out;
-}
+
 
 @keyframes slideInSearch {
   from {
@@ -381,24 +379,26 @@ body {
   color: var(--text-color);
   box-shadow: var(--shadow);
   transition: all 0.3s ease;
+  margin-bottom: 1rem;
+  background: #0e5a50; /* Apenas esta linha foi adicionada/alterada para corresponder */
 }
 
 .search-input:focus {
-  outline: none;
+  outline: none; /* Alterado de 'white' */
   box-shadow: 0 0 0 4px rgba(27, 160, 152, 0.3);
-  background: rgba(255, 255, 255, 0.2);
+  background: #0e5a50; /* Alterado de 'rgba(255, 255, 255, 0.2)' */
 }
 
-.search-bar i.fa-search {
+.search-bar i {
+  /* Alterado o seletor de '.search-bar i.fa-search' para '.search-bar i' */
   position: absolute;
-  right: 20px;
-  top: 50%;
+  right: 60px;
+  top: 48%;
   transform: translateY(-50%);
   color: var(--text-color);
   font-size: 1rem;
-  pointer-events: none;
+  /* 'pointer-events: none;' removido para corresponder exatamente ao discover.css */
 }
-
 .section {
   margin-bottom: 3rem;
   position: relative;
@@ -424,7 +424,7 @@ body {
 .section-title {
   font-size: 1.8rem;
   margin-bottom: 1.5rem;
-  color: var(--text-color);
+  color: #1ba098;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -580,10 +580,12 @@ body {
 
 .nav-arrow.left {
   left: -15px;
+  color: white;
 }
 
 .nav-arrow.right {
   right: -15px;
+  color: white;
 }
 
 .nav-arrow:hover {
@@ -682,7 +684,6 @@ body {
 .watch-later-card-content p {
     font-size: 0.8rem;
 }
-
 
 .filter-bar {
   display: flex;
@@ -837,35 +838,27 @@ body {
     }
 }
 
-
 .notification.success { background: var(--success-color); }
 .notification.error { background: var(--error-color); }
 .notification.info { background: #2196F3; }
 
 
-.tooltip {
-  position: relative;
-}
 
-.tooltip a {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-}
+
 
 .tooltip::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: 100%;
   left: 50%;
-  transform: translateX(-50%) translateY(-5px);
+  transform: translateX(-50%) translateY(10px); /* Ajusta a posição para baixo */
   background: var(--secondary-color);
   color: var(--text-color);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.9rem;
-  white-space: nowrap;
+  white-space: normal; /* Permite que o texto quebre em várias linhas */
+  min-width: 100px; /* Largura mínima */
+  max-width: 120px; /* Largura máxima */
+  max-height: 200px; /* Limita a altura máxima para evitar overflow */
+  overflow-y: auto; /* Adiciona rolagem vertical se necessário */
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
@@ -877,7 +870,19 @@ body {
 .tooltip:hover::after {
   opacity: 1;
   visibility: visible;
-  transform: translateX(-50%) translateY(0);
+  transform: translateX(-50%) translateY(10px); /* Mantém a posição abaixo */
+}
+
+/* Ajusta para aparecer acima se não houver espaço abaixo */
+@media (max-height: 400px) {
+  .tooltip::after {
+    top: auto;
+    bottom: 100%;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  .tooltip:hover::after {
+    transform: translateX(-50%) translateY(-10px);
+  }
 }
 
 .loading-spinner {
@@ -934,7 +939,7 @@ body {
 .theme-toggle,
 .help-button {
   background: var(--accent-color);
-  color: var(--text-color);
+  color: white;
   border: none;
   padding: 10px;
   border-radius: 50%;
@@ -1014,7 +1019,6 @@ body {
     to { opacity: 1; }
 }
 
-
 @keyframes fireworkModal {
   0% { opacity: 0; transform: scale(0.8) translateY(20px); }
   50% { opacity: 0.7; transform: scale(1.05) translateY(0); }
@@ -1048,7 +1052,6 @@ body {
 .tutorial-modal li {
     margin-bottom: 0.75rem;
 }
-
 
 .tutorial-modal button,
 .details-modal button,
@@ -1140,7 +1143,7 @@ body {
   to { transform: translateY(0); }
 }
 
-.footer p { margin-bottom: 1rem; }
+.footer p { margin-bottom: 1rem; color: white;}
 
 .social-links a {
   color: var(--primary-color);
@@ -1150,7 +1153,7 @@ body {
 }
 
 .social-links a:hover {
-  color: var(--accent-color);
+  color: #ffffff;
   transform: scale(1.3);
 }
 
@@ -1226,7 +1229,17 @@ body {
   .trailer-modal button.close { top: -10px; right: -10px; width:30px; height:30px;}
 
   .notification { top: 70px; right: 10px; padding: 10px 15px; font-size: 0.9rem;}
+}
 
+@media (max-height: 400px) {
+  .tooltip::after {
+    top: auto;
+    bottom: 100%;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  .tooltip:hover::after {
+    transform: translateX(-50%) translateY(-10px);
+  }
 }
 
 @media (max-width: 480px) {
@@ -1392,7 +1405,6 @@ body {
   padding-right: 10px; 
 }
 
-
 #seasons-list button, #episodes-list button {
   display: block;
   width: 100%;
@@ -1427,7 +1439,6 @@ body {
     font-size: 0.8rem;
     color: var(--primary-color);
 }
-
 
 @media (max-width: 768px) {
   .series-selection-container {
