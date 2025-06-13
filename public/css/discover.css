@@ -229,6 +229,10 @@ body {
 
 .sidebar-item a {
   text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .sidebar-icon {
@@ -240,7 +244,6 @@ body {
   font-size: 0.8rem;
   margin-top: 0.5rem;
   color: white;
-  text-align: center;
   font-weight: 500;
 }
 
@@ -269,8 +272,7 @@ body {
 }
 
 .hero-banner {
-  background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)),
-    url("https://via.placeholder.com/1200x400");
+  background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8));
   background-size: cover;
   background-position: center;
   border-radius: 15px;
@@ -895,6 +897,7 @@ body {
   color: var(--text-color);
   text-decoration: none;
   transition: all 0.3s ease;
+  justify-content: center; 
 }
 
 

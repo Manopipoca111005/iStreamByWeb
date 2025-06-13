@@ -1,18 +1,16 @@
-const TMDB_API_KEY = "f0609e6638ef2bc5b31313a712e7a8a4"; // A SUA TMDB API KEY
+const TMDB_API_KEY = "f0609e6638ef2bc5b31313a712e7a8a4";
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
-const YOUTUBE_EMBED_BASE_URL = "https://www.youtube.com/embed/VIDEO_ID"; // URL Padrão para embeds do YouTube
+const YOUTUBE_EMBED_BASE_URL = "https://www.youtube.com/embed/VIDEO_ID";
 
-// ===== Variáveis de Estado Globais =====
 let watchLaterItemsGlobal = [];
 let filteredItemsGlobal = [];
 let searchTermGlobal = "";
-let currentTypeFilterGlobal = "all"; // 'all', 'movie', 'tv'
-let currentSortByGlobal = "addedDate"; // Opção de ordenação padrão
+let currentTypeFilterGlobal = "all";
+let currentSortByGlobal = "addedDate";
 let currentPlayer = null;
 let currentItemForDetailsTrailer = null;
 
-// ===== Funções Utilitárias de UI (Notificação, Loading) =====
 function showNotification(message, type = "info") {
   const existingNotification = document.querySelector(".notification");
   if (existingNotification) existingNotification.remove();
@@ -25,7 +23,6 @@ function showNotification(message, type = "info") {
   if (!document.getElementById("notification-styles-watchlater")) {
     const style = document.createElement("style");
     style.id = "notification-styles-watchlater";
-    // Estilos podem ser partilhados com discover.js se tiver um ficheiro CSS/JS comum
     style.textContent = `
         .notification { position: fixed; bottom: -70px; left: 50%; transform: translateX(-50%); padding: 12px 25px; border-radius: 8px; color: white; background-color: #333; z-index: 1005; font-size: 0.95rem; opacity: 0; transition: opacity 0.3s ease-in-out, bottom 0.3s ease-in-out; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; }
         .notification.success { background-color: #4CAF50; }
@@ -58,11 +55,10 @@ function hideLoading() {
   else console.log("Carregamento completo.");
 }
 
-// ===== Funções de Detalhes e Trailer =====
 async function fetchTmdbDetails(itemId, itemType) {
   showLoading();
   try {
-    const lang = "pt-BR"; // ou 'en-US'
+    const lang = "pt-BR";
     const [detailsRes, creditsRes, externalIdsRes] = await Promise.all([
       fetch(
         `${TMDB_BASE_URL}/${itemType}/${itemId}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=release_dates`
@@ -162,50 +158,101 @@ window.closeTrailerModal = function () {
   else if (tModal) tModal.style.display = "none";
 };
 
-async function showItemDetails(item) {
+// --- MODAL DE DETALHES ROBUSTO ---
+function openDetailsModal(item) {
   currentItemForDetailsTrailer = item;
   const detailsModal = document.getElementById("details-modal");
   if (!detailsModal) return;
-  const fullDetails =
-    item.director && item.cast
-      ? item
-      : await fetchTmdbDetails(item.id, item.type);
-  if (!fullDetails) {
-    showNotification("Não foi possível carregar os detalhes.", "error");
-    return;
-  }
 
-  document.getElementById("details-title").textContent =
-    fullDetails.title || fullDetails.name || "N/A";
-  document.getElementById("details-poster").src = fullDetails.poster_path
-    ? `${IMAGE_BASE_URL}${fullDetails.poster_path}`
-    : "https://via.placeholder.com/150x225?text=S/Poster";
-  document.getElementById("details-overview").textContent =
-    fullDetails.overview || "Sem resumo.";
-  document.getElementById("details-rating").textContent =
-    fullDetails.vote_average
-      ? `${fullDetails.vote_average.toFixed(1)}/10 (${
-          fullDetails.vote_count
-        } votos)`
-      : "N/A";
-  const releaseDate = fullDetails.release_date || fullDetails.first_air_date;
-  document.getElementById("details-release").textContent = releaseDate
-    ? new Date(releaseDate + "T00:00:00Z").toLocaleDateString("pt-BR", {
-        timeZone: "UTC",
-      })
-    : "N/A";
-  document.getElementById("details-director").textContent =
-    fullDetails.director || "N/A";
-  document.getElementById("details-cast").textContent =
-    fullDetails.cast || "N/A";
-  document.getElementById("details-trailer-button").style.display =
-    "inline-block";
-  if (typeof detailsModal.showModal === "function") detailsModal.showModal();
-  else detailsModal.style.display = "block";
+  // Preenche os dados
+  (async () => {
+    const fullDetails = item.director && item.cast ? item : await fetchTmdbDetails(item.id, item.type);
+    if (!fullDetails) {
+      showNotification("Não foi possível carregar os detalhes.", "error");
+      return;
+    }
+    document.getElementById("details-title").textContent = fullDetails.title || fullDetails.name || "N/A";
+    document.getElementById("details-poster").src = fullDetails.poster_path ? `${IMAGE_BASE_URL}${fullDetails.poster_path}` : "https://via.placeholder.com/150x225?text=S/Poster";
+    document.getElementById("details-overview").textContent = fullDetails.overview || "Sem resumo.";
+    document.getElementById("details-rating").textContent = fullDetails.vote_average ? `${fullDetails.vote_average.toFixed(1)}/10 (${fullDetails.vote_count} votos)` : "N/A";
+    const releaseDate = fullDetails.release_date || fullDetails.first_air_date;
+    document.getElementById("details-release").textContent = releaseDate ? new Date(releaseDate + "T00:00:00Z").toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "N/A";
+    document.getElementById("details-director").textContent = fullDetails.director || "N/A";
+    document.getElementById("details-cast").textContent = fullDetails.cast || "N/A";
+    document.getElementById("details-trailer-button").style.display = "inline-block";
+    // Abre o modal de forma controlada
+    if (typeof detailsModal.showModal === "function") detailsModal.showModal();
+    else {
+      detailsModal.setAttribute("open", "true");
+      detailsModal.style.display = "block";
+    }
+  })();
 }
 
-// ===== Lógica Específica do Watch Later =====
+function closeDetailsModal() {
+  const detailsModal = document.getElementById("details-modal");
+  if (!detailsModal) return;
+  if (typeof detailsModal.close === "function") detailsModal.close();
+  detailsModal.removeAttribute("open");
+  detailsModal.style.display = "none";
+}
+
+// --- CONTROLE ROBUSTO DE MODAIS GERAIS ---
+function openModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+  if (typeof modal.showModal === "function") modal.showModal();
+  else {
+    modal.setAttribute("open", "true");
+    modal.style.display = "block";
+  }
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+  if (typeof modal.close === "function") modal.close();
+  modal.removeAttribute("open");
+  modal.style.display = "none";
+}
+
+function enforceModalCloseOnlyByButton(modalId, closeBtnSelector = "button.action-btn, .close") {
+  document.addEventListener("DOMContentLoaded", function () {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    // Bloqueia ESC e backdrop
+    modal.addEventListener("cancel", (e) => { e.preventDefault(); });
+    modal.addEventListener("close", () => {
+      modal.removeAttribute("open");
+      modal.style.display = "none";
+    });
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) e.preventDefault();
+    });
+    // Só fecha pelo botão
+    const closeBtn = modal.querySelector(closeBtnSelector);
+    if (closeBtn) {
+      closeBtn.onclick = function (e) {
+        e.preventDefault();
+        closeModal(modalId);
+      };
+    }
+  });
+}
+
+// Aplica para todos os modals relevantes
+['details-modal', 'trailer-modal', 'tutorial-modal'].forEach(id => enforceModalCloseOnlyByButton(id));
+
+function closeAllModals() {
+  document.querySelectorAll('dialog[open]').forEach(modal => {
+    if (typeof modal.close === 'function') modal.close();
+    modal.removeAttribute('open');
+    modal.style.display = '';
+  });
+}
+
 function applyFiltersAndSort() {
+  closeAllModals();
   let itemsToDisplay = [...watchLaterItemsGlobal];
 
   if (currentTypeFilterGlobal === "movie" || currentTypeFilterGlobal === "tv") {
@@ -236,6 +283,8 @@ function applyFiltersAndSort() {
   }
   filteredItemsGlobal = itemsToDisplay;
   displayWatchLaterItems(filteredItemsGlobal);
+
+  setTimeout(closeAllModals, 0);
 }
 
 function displayWatchLaterItems(itemsToDisplayOnGrid) {
@@ -274,8 +323,6 @@ function displayWatchLaterItems(itemsToDisplayOnGrid) {
             <img src="${posterUrl}" alt="Poster de ${itemTitle}" loading="lazy">
             <div class="watch-later-card-content">
                 <h3 class="watch-later-card-title">${itemTitle}</h3>
-                <p class="card-info"><strong>Tipo:</strong> ${itemTypeDisplay}</p>
-                <p class="card-info"><strong>Adicionado:</strong> ${itemAddedDate}</p>
                 <p class="card-info"><strong>Rating:</strong> ${itemRating}</p>
             </div>
             <div class="watch-later-card-actions">
@@ -290,7 +337,7 @@ function displayWatchLaterItems(itemsToDisplayOnGrid) {
     });
     card.querySelector(".details-btn")?.addEventListener("click", (e) => {
       e.stopPropagation();
-      showItemDetails(item);
+      openDetailsModal(item);
     });
     card.querySelector(".remove-btn")?.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -302,11 +349,11 @@ function displayWatchLaterItems(itemsToDisplayOnGrid) {
       );
     });
     card.addEventListener("click", (e) => {
-      if (!e.target.closest(".action-btn")) showItemDetails(item);
+      if (!e.target.closest(".action-btn")) openDetailsModal(item);
     });
     card.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.target.closest("button"))
-        showItemDetails(item);
+        openDetailsModal(item);
     });
     grid.appendChild(card);
   });
@@ -418,11 +465,13 @@ window.filterBy = function (filterType, buttonElement) {
   );
 };
 
-// ===== Funções de UI Comuns e Inicialização =====
 window.toggleDropdown = function (button) {
   const allDropdowns = document.querySelectorAll(".dropdown-menu");
   const clickedDropdown = button.nextElementSibling;
   if (!clickedDropdown) return;
+
+  document.removeEventListener("click", this.__dropdownCloseHandler, true);
+
   const isActive = clickedDropdown.classList.contains("show");
   allDropdowns.forEach((dropdown) => {
     if (dropdown !== clickedDropdown) {
@@ -431,23 +480,23 @@ window.toggleDropdown = function (button) {
         dropdown.previousElementSibling.setAttribute("aria-expanded", "false");
     }
   });
+
   if (isActive) {
     clickedDropdown.classList.remove("show");
     button.setAttribute("aria-expanded", "false");
   } else {
     clickedDropdown.classList.add("show");
     button.setAttribute("aria-expanded", "true");
+
+    this.__dropdownCloseHandler = (e) => {
+      if (!button.contains(e.target) && !clickedDropdown.contains(e.target)) {
+        clickedDropdown.classList.remove("show");
+        button.setAttribute("aria-expanded", "false");
+        document.removeEventListener("click", this.__dropdownCloseHandler, true);
+      }
+    };
+    document.addEventListener("click", this.__dropdownCloseHandler, true);
   }
-  const closeHandler = (e) => {
-    if (!button.contains(e.target) && !clickedDropdown.contains(e.target)) {
-      clickedDropdown.classList.remove("show");
-      button.setAttribute("aria-expanded", "false");
-      document.removeEventListener("click", closeHandler, true);
-    }
-  };
-  if (clickedDropdown.classList.contains("show"))
-    document.addEventListener("click", closeHandler, true);
-  else document.removeEventListener("click", closeHandler, true);
 };
 
 window.scrollToTop = function () {
@@ -464,9 +513,6 @@ window.closeTutorial = function () {
   if (m && typeof m.close === "function") m.close();
   else if (m) m.style.display = "none";
 };
-
-// Função utilitária para preparar o stream Real-Debrid diretamente do frontend
-// Removido: função prepareRealDebridStream e qualquer uso relacionado
 
 document.addEventListener("DOMContentLoaded", () => {
   watchLaterItemsGlobal = JSON.parse(localStorage.getItem("watchLater")) || [];

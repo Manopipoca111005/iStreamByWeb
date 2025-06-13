@@ -1,3 +1,8 @@
+/* Garante que o modal de detalhes só aparece quando está aberto */
+.details-modal:not([open]) {
+  display: none !important;
+}
+
 :root {
   --primary-color: #1ba098;
   --secondary-color: #00332c;
@@ -190,8 +195,15 @@ body {
 }
 
 .sidebar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding: 0.5rem;
   border-radius: 10px;
+  min-width: 70px;
+  min-height: 90px;
+  box-sizing: border-box;
   cursor: pointer;
   transition: all 0.3s ease;
   animation: fireworkItem 0.7s ease-out forwards;
@@ -199,7 +211,31 @@ body {
 }
 
 .sidebar-item a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   text-decoration: none;
+}
+
+.sidebar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  color: white;
+  margin-bottom: 0.2rem;
+}
+
+.sidebar-label {
+  font-size: 0.8rem;
+  color: white;
+  font-weight: 500;
+  text-align: center;
+  width: 100%;
+  margin: 0;
 }
 
 @keyframes fireworkItem {
@@ -221,19 +257,6 @@ body {
 .sidebar-item.active {
   background: var(--primary-color);
   transform: scale(1.1);
-}
-
-.sidebar-icon {
-  font-size: 1.8rem;
-  color: var(--text-color);
-}
-
-.sidebar-label {
-  font-size: 0.8rem;
-  margin-top: 0.5rem;
-  color: var(--text-color);
-  text-align: center;
-  font-weight: 500;
 }
 
 .main {
@@ -407,7 +430,11 @@ body {
   }
 }
 
-.watch-later-card {
+/* === Padronização dos cards: Watch Later igual Discover === */
+
+/* Remover estilos específicos antigos do .watch-later-card e derivados */
+.watch-later-card,
+.movie-card {
   background: var(--secondary-color);
   border-radius: 15px;
   overflow: hidden;
@@ -433,23 +460,27 @@ body {
   }
 }
 
-.watch-later-card:hover {
+.watch-later-card:hover,
+.movie-card:hover {
   transform: translateY(-10px) scale(1.05);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
 }
 
-.watch-later-card img {
+.watch-later-card img,
+.movie-card img {
   width: 100%;
   height: 280px;
   object-fit: cover;
   transition: transform 0.3s ease;
 }
 
-.watch-later-card:hover img {
+.watch-later-card:hover img,
+.movie-card:hover img {
   transform: scale(1.1);
 }
 
-.watch-later-card-overlay {
+.watch-later-card-overlay,
+.movie-card-overlay {
   position: absolute;
   top: 0;
   left: 0;
@@ -466,11 +497,13 @@ body {
   color: var(--text-color);
 }
 
-.watch-later-card:hover .watch-later-card-overlay {
+.watch-later-card:hover .watch-later-card-overlay,
+.movie-card:hover .movie-card-overlay {
   opacity: 1;
 }
 
-.watch-later-card-overlay button {
+.watch-later-card-overlay button,
+.movie-card-overlay button {
   background: var(--primary-color);
   color: var(--text-color);
   border: none;
@@ -481,56 +514,37 @@ body {
   transition: all 0.3s ease;
 }
 
-.watch-later-card-overlay button:hover {
+.watch-later-card-overlay button:hover,
+.movie-card-overlay button:hover {
   background: var(--accent-color);
   transform: scale(1.1);
 }
 
-.watch-later-card-content {
+.watch-later-card-content,
+.movie-card-content {
   padding: 1rem;
   text-align: center;
 }
 
-.watch-later-card-content h3 {
+.watch-later-card-content h3,
+.movie-card-content h3 {
   margin: 0 0 0.5rem;
   font-size: 1.1rem;
   font-weight: 600;
 }
 
-.watch-later-card-actions .play-btn {
-  background: var(--primary-color);
-  color: var(--text-color);
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 0.8rem;
-  transition: all 0.3s ease;
-  line-height: normal;
-  text-align: center;
-  display: inline-flex;
+/* Padronizar ações do card */
+.watch-later-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   align-items: center;
-  justify-content: center;
-}
-
-.watch-later-card-actions .play-btn:hover {
-  background: var(--accent-color);
-  transform: scale(1.05);
-}
-
-.skeleton-card {
-  background: var(--secondary-color);
-  border-radius: 15px;
-  height: 340px;
-  position: relative;
-  overflow: hidden;
+  margin-top: 1rem;
 }
 
 .watch-later-card-actions .play-btn,
 .watch-later-card-actions .details-btn,
-.watch-later-card-actions .remove-btn,
-.details-modal .action-btn {
+.watch-later-card-actions .remove-btn {
   background: var(--primary-color);
   color: var(--text-color);
   border: none;
@@ -538,7 +552,7 @@ body {
   border-radius: 20px;
   cursor: pointer;
   font-weight: 500;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   transition: all 0.3s ease;
   line-height: normal;
   text-align: center;
@@ -549,14 +563,18 @@ body {
 
 .watch-later-card-actions .play-btn:hover,
 .watch-later-card-actions .details-btn:hover,
-.watch-later-card-actions .remove-btn:hover,
-.details-modal .action-btn:hover {
+.watch-later-card-actions .remove-btn:hover {
   background: var(--accent-color);
-  transform: scale(1.05);
+  transform: scale(1.1);
 }
 
-#details-trailer-button {
-  margin-right: 10px;
+/* Skeleton card igual Discover */
+.skeleton-card {
+  background: var(--secondary-color);
+  border-radius: 15px;
+  height: 340px;
+  position: relative;
+  overflow: hidden;
 }
 
 .skeleton-card::before {
@@ -566,23 +584,16 @@ body {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
   animation: shimmerSkeleton 1.5s infinite;
 }
 
 @keyframes shimmerSkeleton {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
+
+/* Fim da padronização dos cards */
 
 .notification {
   position: fixed;
@@ -721,6 +732,10 @@ body {
   width: 90%;
   color: var(--text-color);
   animation: fireworkModal 0.4s ease-out;
+}
+
+.tutorial-modal:not([open]) {
+  display: none !important;
 }
 
 @keyframes fireworkModal {
@@ -897,4 +912,80 @@ body {
   .logo {
     font-size: 1.5rem;
   }
+}
+
+/* Detalhes do Modal Watch Later */
+.details-modal {
+  background: rgba(0, 0, 0, 0.92);
+  border: none;
+  border-radius: 15px;
+  padding: 2rem;
+  max-width: 600px;
+  width: calc(100% - 40px);
+  margin: auto;
+  color: var(--text-color);
+  animation: fireworkModal 0.4s ease-out;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  overflow-y: auto;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.details-modal::backdrop {
+  background: rgba(0, 0, 0, 0.92) !important;
+  /* Mais escuro e cobre tudo */
+}
+
+.details-modal img {
+  width: 100%;
+  max-width: 300px;
+  border-radius: 10px;
+  margin: 0 auto 1.5rem auto;
+  display: block;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.details-modal h2 {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.details-modal p {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.details-modal .details-modal-content {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.details-modal button {
+  background: var(--primary-color);
+  color: var(--text-color);
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+  margin-right: 0.5rem;
+}
+
+.details-modal button:hover {
+  background: var(--accent-color);
+  transform: scale(1.1);
+}
+
+.details-modal strong {
+  font-weight: bold;
 }
