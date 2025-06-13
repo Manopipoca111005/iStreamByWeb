@@ -1,0 +1,87 @@
+/* Responsive Modal Styles */
+@media screen and (max-width: 768px) {
+  .tutorial-modal,
+  .details-modal,
+  .trailer-modal,
+  .series-modal {
+    width: 95%;
+    padding: 1.5rem;
+    margin: 10px;
+    max-height: 85vh;
+  }
+
+  .details-modal img {
+    max-width: 200px;
+    margin-bottom: 1rem;
+  }
+
+  .details-modal h2,
+  .tutorial-modal h2,
+  .trailer-modal h2,
+  .series-modal h2 {
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+  }
+
+  .details-modal p,
+  .tutorial-modal p,
+  .tutorial-modal li,
+  .details-modal span {
+    font-size: 0.9rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .details-modal button,
+  .tutorial-modal button,
+  .trailer-modal button.close {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.85rem;
+    width: 100%;
+    max-width: 200px;
+    margin: 0.5rem auto;
+  }
+
+  .details-modal .details-modal-content {
+    padding: 0.5rem;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .tutorial-modal,
+  .details-modal,
+  .trailer-modal,
+  .series-modal {
+    width: 100%;
+    padding: 1rem;
+    margin: 0;
+    border-radius: 10px;
+    max-height: 90vh;
+  }
+
+  .details-modal img {
+    max-width: 150px;
+  }
+
+  .details-modal h2,
+  .tutorial-modal h2,
+  .trailer-modal h2,
+  .series-modal h2 {
+    font-size: 1.2rem;
+  }
+
+  .details-modal p,
+  .tutorial-modal p,
+  .tutorial-modal li,
+  .details-modal span {
+    font-size: 0.85rem;
+  }
+
+  .tutorial-modal ul {
+    padding-left: 5px;
+  }
+
+  iframe {
+    width: 100% !important;
+    height: 200px !important;
+  }
+}

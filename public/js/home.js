@@ -323,71 +323,76 @@ async function openSeriesModal(seriesData) {
     seasonsList.innerHTML =
       '<p class="error-message">Could not load seasons.</p>';
   }
+  // No final da função openSeriesModal, adicione:
+if (window.innerWidth <= 768) {
+  modal.style.maxWidth = '95vw';
+  modal.style.width = '95vw';
+  modal.style.padding = '1rem';
+}
+}
+function showSeasonsList() {
+  const seasonsContainer = document.querySelector('.seasons-container');
+  const episodesContainer = document.querySelector('.episodes-container');
+  
+  seasonsContainer.classList.remove('hidden');
+  episodesContainer.classList.add('hidden');
 }
 
-async function fetchEpisodes(
-  seriesId,
-  seasonNumber,
-  seriesImdbId,
-  seasonButton
-) {
-  const episodesList = document.getElementById("episodes-list");
-  episodesList.innerHTML =
-    '<div class="loading-spinner active"><i class="fas fa-spinner fa-spin"></i></div>';
+async function fetchEpisodes(seriesId, seasonNumber, seriesImdbId, seasonButton) {
+  const episodesList = document.getElementById('episodes-list');
+  const seasonsContainer = document.querySelector('.seasons-container');
+  const episodesContainer = document.querySelector('.episodes-container');
+  
+  episodesList.innerHTML = '<div class="loading-spinner active"><i class="fas fa-spinner fa-spin"></i></div>';
 
-  document
-    .querySelectorAll("#seasons-list button")
-    .forEach((btn) => btn.classList.remove("active"));
-  if (seasonButton) {
-    seasonButton.classList.add("active");
-  }
+  document.querySelectorAll('#seasons-list button').forEach(btn => btn.classList.remove('active'));
+  if (seasonButton) seasonButton.classList.add('active');
 
   try {
     if (!seriesImdbId) {
       try {
-        const externalIdsResponse = await fetch(
-          `${TMDB_BASE_URL}/tv/${seriesId}/external_ids?api_key=${TMDB_API_KEY}`
-        );
+        const externalIdsResponse = await fetch(`${TMDB_BASE_URL}/tv/${seriesId}/external_ids?api_key=${TMDB_API_KEY}`);
         if (externalIdsResponse.ok) {
           const externalIds = await externalIdsResponse.json();
-          seriesImdbId = externalIds.imdb_id || "";
+          seriesImdbId = externalIds.imdb_id || '';
         }
       } catch (error) {
-        console.warn("Failed to fetch fallback IMDb ID:", error);
+        console.warn('Failed to fetch fallback IMDb ID:', error);
       }
     }
 
-    const response = await fetch(
-      `${TMDB_BASE_URL}/tv/${seriesId}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=en-US`
-    );
-    if (!response.ok) throw new Error("Failed to fetch episodes.");
+    const response = await fetch(`${TMDB_BASE_URL}/tv/${seriesId}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=en-US`);
+    if (!response.ok) throw new Error('Failed to fetch episodes.');
     const seasonDetails = await response.json();
 
-    const poster = seasonDetails.poster_path
+    const poster = seasonDetails.poster_path 
       ? `${IMAGE_BASE_URL}${seasonDetails.poster_path}`
-      : "https://via.placeholder.com/500x750?text=No+Poster";
+      : 'https://via.placeholder.com/500x750?text=No+Poster';
 
-    episodesList.innerHTML = seasonDetails.episodes
-      .map((episode) => {
-        const title = `${episode.episode_number}. ${episode.name}`;
-        const fullTitle = `${seasonDetails.name} - ${title}`;
-        return `
-                <button class="episode-button" 
-                        data-imdb-id="${seriesImdbId}" 
-                        data-type="series" 
-                        data-title="${fullTitle.replace(/"/g, "&quot;")}" 
-                        data-poster="${poster}" 
-                        data-season="${seasonNumber}" 
-                        data-episode="${episode.episode_number}">
-                    <span>${title}</span>
-                    <i class="fas fa-play play-icon"></i>
-                </button>`;
-      })
-      .join("");
+    episodesList.innerHTML = seasonDetails.episodes.map((episode) => {
+      const title = `${episode.episode_number}. ${episode.name}`;
+      const fullTitle = `${seasonDetails.name} - ${title}`;
+      return `
+        <button class="episode-button" 
+                data-imdb-id="${seriesImdbId}" 
+                data-type="series" 
+                data-title="${fullTitle.replace(/"/g, '&quot;')}" 
+                data-poster="${poster}" 
+                data-season="${seasonNumber}" 
+                data-episode="${episode.episode_number}">
+          <span>${title}</span>
+          <i class="fas fa-play play-icon"></i>
+        </button>`;
+    }).join('');
+
+    // Mostrar episódios e ocultar temporadas em mobile
+    if (window.innerWidth <= 768) {
+      seasonsContainer.classList.add('hidden');
+      episodesContainer.classList.remove('hidden');
+    }
   } catch (error) {
-    console.error("Error fetching episodes:", error);
-    episodesList.innerHTML =
-      '<p class="error-message">Could not load episodes.</p>';
+    console.error('Error fetching episodes:', error);
+    episodesList.innerHTML = '<p class="error-message">Could not load episodes.</p>';
   }
 }
 
