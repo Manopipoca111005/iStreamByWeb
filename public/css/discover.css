@@ -99,7 +99,7 @@ body {
 }
 
 .logo i {
-  color: white;
+  color: var(--primary-color);
   animation: sparkle 1.5s infinite;
 }
 
