@@ -144,7 +144,7 @@ body {
   transform: translateX(-50%);
   background: var(--secondary-color, #222);
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   min-width: 140px;
   z-index: 1002;
 }
@@ -238,7 +238,7 @@ body {
 
 .sidebar-icon {
   font-size: 1.8rem;
-  color: white
+  color: white;
 }
 
 .sidebar-label {
@@ -355,9 +355,6 @@ body {
   transform: scale(1.05);
 }
 
-
-
-
 @keyframes slideInSearch {
   from {
     transform: translateY(-50px);
@@ -388,14 +385,20 @@ body {
   box-shadow: 0 0 0 4px rgba(27, 160, 152, 0.3);
   background: #0e5a50; /* Alterado de 'rgba(255, 255, 255, 0.2)' */
 }
+.search-bar {
+  width: 100%;
+  margin: 0 auto;
+  animation: slideInSearch 0.5s ease-out forwards;
+  display: flex;
+  flex-direction: row;
+  align-items: space-between;
+}
 
 .search-bar i {
   /* Alterado o seletor de '.search-bar i.fa-search' para '.search-bar i' */
-  position: absolute;
-  right: 60px;
-  top: 48%;
-  transform: translateY(-50%);
+  position: relative;
   color: var(--text-color);
+  transform: translateX(-200%) translateY(25%);
   font-size: 1rem;
   /* 'pointer-events: none;' removido para corresponder exatamente ao discover.css */
 }
@@ -559,7 +562,7 @@ body {
   text-overflow: ellipsis;
 }
 .carousel-item-content p {
-    font-size: 0.8rem;
+  font-size: 0.8rem;
 }
 
 .nav-arrow {
@@ -682,7 +685,7 @@ body {
   text-overflow: ellipsis;
 }
 .watch-later-card-content p {
-    font-size: 0.8rem;
+  font-size: 0.8rem;
 }
 
 .filter-bar {
@@ -762,7 +765,7 @@ body {
   justify-content: space-around;
   position: fixed;
   bottom: 0;
-  left:0;
+  left: 0;
   width: 100%;
   background: linear-gradient(
     to top,
@@ -813,7 +816,8 @@ body {
   color: white;
   z-index: 1005;
   box-shadow: var(--shadow);
-  animation: fireworkNotification 0.4s ease-out, fadeOutNotification 0.5s ease-out 2.5s forwards;
+  animation: fireworkNotification 0.4s ease-out,
+    fadeOutNotification 0.5s ease-out 2.5s forwards;
 }
 
 @keyframes fireworkNotification {
@@ -832,19 +836,21 @@ body {
 }
 
 @keyframes fadeOutNotification {
-    to {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
 }
 
-.notification.success { background: var(--success-color); }
-.notification.error { background: var(--error-color); }
-.notification.info { background: #2196F3; }
-
-
-
-
+.notification.success {
+  background: var(--success-color);
+}
+.notification.error {
+  background: var(--error-color);
+}
+.notification.info {
+  background: #2196f3;
+}
 
 .tooltip::after {
   left: 50%;
@@ -902,8 +908,12 @@ body {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .skeleton-card {
@@ -932,8 +942,12 @@ body {
 }
 
 @keyframes shimmerSkeleton {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .theme-toggle,
@@ -985,9 +999,15 @@ body {
 }
 
 @keyframes sparkleButton {
-  0% { box-shadow: 0 0 5px var(--primary-color); }
-  50% { box-shadow: 0 0 15px var(--accent-color); }
-  100% { box-shadow: 0 0 5px var(--primary-color); }
+  0% {
+    box-shadow: 0 0 5px var(--primary-color);
+  }
+  50% {
+    box-shadow: 0 0 15px var(--accent-color);
+  }
+  100% {
+    box-shadow: 0 0 5px var(--primary-color);
+  }
 }
 
 .tutorial-modal,
@@ -1002,7 +1022,7 @@ body {
   margin: auto;
   color: var(--text-color);
   animation: fireworkModal 0.4s ease-out;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   overflow-y: auto;
   max-height: 90vh;
 }
@@ -1015,14 +1035,27 @@ body {
 }
 
 @keyframes fadeInBackdrop {
-    from { opacity: 0; }
-    to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes fireworkModal {
-  0% { opacity: 0; transform: scale(0.8) translateY(20px); }
-  50% { opacity: 0.7; transform: scale(1.05) translateY(0); }
-  100% { opacity: 1; transform: scale(1) translateY(0); }
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .tutorial-modal h2,
@@ -1042,15 +1075,15 @@ body {
   font-size: 0.95rem;
 }
 .details-modal strong {
-    color: var(--primary-color);
+  color: var(--primary-color);
 }
 
 .tutorial-modal ul {
-    list-style: inside;
-    padding-left: 10px;
+  list-style: inside;
+  padding-left: 10px;
 }
 .tutorial-modal li {
-    margin-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .tutorial-modal button,
@@ -1081,7 +1114,7 @@ body {
   border-radius: 10px;
   margin: 0 auto 1.5rem auto;
   display: block;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
 .trailer-modal {
@@ -1122,7 +1155,7 @@ body {
   z-index: 20;
 }
 .trailer-modal button.close:hover {
-    background: var(--accent-color);
+  background: var(--accent-color);
 }
 
 .footer {
@@ -1139,11 +1172,18 @@ body {
 }
 
 @keyframes slideUpFooter {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
-.footer p { margin-bottom: 1rem; color: white;}
+.footer p {
+  margin-bottom: 1rem;
+  color: white;
+}
 
 .social-links a {
   color: var(--primary-color);
@@ -1158,8 +1198,12 @@ body {
 }
 
 @media (max-width: 768px) {
-  .header { padding: 1rem; }
-  .logo { font-size: 1.5rem; }
+  .header {
+    padding: 1rem;
+  }
+  .logo {
+    font-size: 1.5rem;
+  }
 
   .sidebar {
     transform: translateX(-100%);
@@ -1171,7 +1215,7 @@ body {
   }
   .sidebar.active {
     transform: translateX(0);
-    box-shadow: 5px 0px 15px rgba(0,0,0,0.2);
+    box-shadow: 5px 0px 15px rgba(0, 0, 0, 0.2);
   }
   .main {
     margin-left: 0;
@@ -1179,21 +1223,27 @@ body {
     border-radius: 0;
     padding-top: 75px;
   }
-  .bottom-nav { display: flex; }
+  .bottom-nav {
+    display: flex;
+  }
   .back-to-top {
-      bottom: 70px;
+    bottom: 70px;
   }
 
-  .carousel-item, .watch-later-card, .skeleton-card {
+  .carousel-item,
+  .watch-later-card,
+  .skeleton-card {
     flex: 0 0 160px;
   }
-  .carousel-item img, .watch-later-card img {
+  .carousel-item img,
+  .watch-later-card img {
     height: 220px;
   }
-  .carousel-item-content h3, .watch-later-card-content h3 {
-      font-size: 0.9rem;
+  .carousel-item-content h3,
+  .watch-later-card-content h3 {
+    font-size: 0.9rem;
   }
-  
+
   .carousel-item-overlay {
     opacity: 1;
     background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 30%, transparent);
@@ -1202,33 +1252,59 @@ body {
     gap: 0.3rem;
   }
 
-  .hero-banner { padding: 2rem; }
-  .hero-banner h1 { font-size: 1.8rem; }
-  .hero-banner p { font-size: 1rem; }
+  .hero-banner {
+    padding: 2rem;
+  }
+  .hero-banner h1 {
+    font-size: 1.8rem;
+  }
+  .hero-banner p {
+    font-size: 1rem;
+  }
 
-  .nav-arrow.left { left: 5px; }
-  .nav-arrow.right { right: 5px; }
+  .nav-arrow.left {
+    left: 5px;
+  }
+  .nav-arrow.right {
+    right: 5px;
+  }
 
-  .watch-later-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .watch-later-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
 
   .theme-toggle,
   .help-button {
-      width: 35px;
-      height: 35px;
-      padding: 8px;
+    width: 35px;
+    height: 35px;
+    padding: 8px;
   }
 
-  .tutorial-modal, .details-modal, .trailer-modal {
-      padding: 1.5rem;
-      width: calc(100% - 30px);
+  .tutorial-modal,
+  .details-modal,
+  .trailer-modal {
+    padding: 1.5rem;
+    width: calc(100% - 30px);
   }
-  .tutorial-modal h2, .details-modal h2, .trailer-modal h2 {
-      font-size: 1.5rem;
+  .tutorial-modal h2,
+  .details-modal h2,
+  .trailer-modal h2 {
+    font-size: 1.5rem;
   }
 
-  .trailer-modal button.close { top: -10px; right: -10px; width:30px; height:30px;}
+  .trailer-modal button.close {
+    top: -10px;
+    right: -10px;
+    width: 30px;
+    height: 30px;
+  }
 
-  .notification { top: 70px; right: 10px; padding: 10px 15px; font-size: 0.9rem;}
+  .notification {
+    top: 70px;
+    right: 10px;
+    padding: 10px 15px;
+    font-size: 0.9rem;
+  }
 }
 
 @media (max-height: 400px) {
@@ -1243,15 +1319,22 @@ body {
 }
 
 @media (max-width: 480px) {
-  .main { padding: 70px 1rem 1rem; }
+  .main {
+    padding: 70px 1rem 1rem;
+  }
 
-  .carousel-item, .watch-later-card, .skeleton-card {
+  .carousel-item,
+  .watch-later-card,
+  .skeleton-card {
     flex: 0 0 140px;
   }
-  .carousel-item img, .watch-later-card img {
+  .carousel-item img,
+  .watch-later-card img {
     height: 190px;
   }
-  .section-title { font-size: 1.3rem; }
+  .section-title {
+    font-size: 1.3rem;
+  }
   .hero-banner {
     padding: 30px 15px;
     text-align: center;
@@ -1265,24 +1348,34 @@ body {
     font-size: 1rem;
   }
 
-  .watch-later-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-
-  .bottom-nav a.nav-item { font-size: 0.7rem; }
-  .nav-icon { font-size: 1.4rem; }
-
-  .tutorial-modal, .details-modal, .trailer-modal {
-      padding: 1rem;
-      width: calc(100% - 20px);
+  .watch-later-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   }
-   .tutorial-modal h2, .details-modal h2, .trailer-modal h2 {
-      font-size: 1.3rem;
+
+  .bottom-nav a.nav-item {
+    font-size: 0.7rem;
+  }
+  .nav-icon {
+    font-size: 1.4rem;
+  }
+
+  .tutorial-modal,
+  .details-modal,
+  .trailer-modal {
+    padding: 1rem;
+    width: calc(100% - 20px);
+  }
+  .tutorial-modal h2,
+  .details-modal h2,
+  .trailer-modal h2 {
+    font-size: 1.3rem;
   }
   .details-modal img#details-poster {
-      max-width: 200px;
+    max-width: 200px;
   }
-    .trailer-modal-content {
-        padding-top: 56.25%;
-    }
+  .trailer-modal-content {
+    padding-top: 56.25%;
+  }
 }
 
 .movie-grid {
@@ -1375,7 +1468,7 @@ body {
 }
 
 .movie-card .carousel-item-content p {
-    font-size: 0.8rem;
+  font-size: 0.8rem;
 }
 
 .series-selection-container {
@@ -1387,25 +1480,29 @@ body {
   overflow-y: hidden;
 }
 
-.seasons-container, .episodes-container {
+.seasons-container,
+.episodes-container {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-.seasons-container h3, .episodes-container h3 {
+.seasons-container h3,
+.episodes-container h3 {
   color: var(--primary-color);
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
   border-bottom: 2px solid var(--accent-color);
 }
 
-#seasons-list, #episodes-list {
+#seasons-list,
+#episodes-list {
   overflow-y: auto;
-  padding-right: 10px; 
+  padding-right: 10px;
 }
 
-#seasons-list button, #episodes-list button {
+#seasons-list button,
+#episodes-list button {
   display: block;
   width: 100%;
   padding: 0.75rem;
@@ -1419,7 +1516,8 @@ body {
   transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
-#seasons-list button:hover, #episodes-list button:hover {
+#seasons-list button:hover,
+#episodes-list button:hover {
   background-color: var(--accent-color);
   transform: translateX(5px);
 }
@@ -1430,14 +1528,14 @@ body {
 }
 
 .episode-button {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .episode-button .play-icon {
-    font-size: 0.8rem;
-    color: var(--primary-color);
+  font-size: 0.8rem;
+  color: var(--primary-color);
 }
 
 @media (max-width: 768px) {
