@@ -24,11 +24,11 @@ function showMessage(elementId, message, isError = true) {
         el.textContent = message;
         el.classList.remove('hidden');
         if (isError) {
-            el.classList.remove('text-green-400'); // Caso tenha sido usado para sucesso
+            el.classList.remove('text-green-400');
             el.classList.add('text-red-400');
         } else {
             el.classList.remove('text-red-400');
-            el.classList.add('text-green-400'); // Para mensagens de sucesso
+            el.classList.add('text-green-400');
         }
     } else {
         console.warn(`Element with ID '${elementId}' not found for showing message.`);
@@ -37,141 +37,95 @@ function showMessage(elementId, message, isError = true) {
 
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("DOM completamente carregado e parseado. Tentando carregar Firebase...");
+    console.log("DOM carregado. Iniciando Firebase…");
 
-  import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js")
-    .then(({ initializeApp }) => {
-      console.log("Firebase App SDK carregado.");
-      import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js")
-        .then(({ getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword }) => {
-          console.log("Firebase Auth SDK carregado.");
+    import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js")
+        .then(({ initializeApp }) => {
+            import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js")
+                .then(({ getAuth, GoogleAuthProvider, GithubAuthProvider, signInWithPopup }) => {
+                    // Configuração do Firebase ------------------------------------------------
+                    const firebaseConfig = {
+                        apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
+                        authDomain: "istreambyweb.firebaseapp.com",
+                        projectId: "istreambyweb",
+                        storageBucket: "istreambyweb.firebasestorage.app",
+                        messagingSenderId: "458543632560",
+                        appId: "1:458543632560:web:1de42763df2d1515316b75",
+                        measurementId: "G-JWNQKK2ZKW"
+                    };
 
+                    const app = initializeApp(firebaseConfig);
+                    const auth = getAuth(app);
+                    auth.languageCode = "en";
+                    console.log("Firebase inicializado.");
 
-          const firebaseConfig = {
-  apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
-  authDomain: "istreambyweb.firebaseapp.com",
-  projectId: "istreambyweb",
-  storageBucket: "istreambyweb.firebasestorage.app",
-  messagingSenderId: "458543632560",
-  appId: "1:458543632560:web:1de42763df2d1515316b75",
-  measurementId: "G-JWNQKK2ZKW"
-          };
+                    // Google
+                    const googleButton = document.getElementById("google-button");
+                    const googleProvider = new GoogleAuthProvider();
 
-          try {
-            const app = initializeApp(firebaseConfig);
-            const auth = getAuth(app);
-            auth.languageCode = 'en';
-            console.log("Firebase inicializado com sucesso.");
-
-            // --- Lógica de Login com Google ---
-            const googleProvider = new GoogleAuthProvider();
-            const googleButton = document.getElementById("google-button");
-
-            if (googleButton) {
-              googleButton.addEventListener("click", () => {
-                clearAllAuthMessages(); // Limpa mensagens de erro anteriores
-                console.log("Botão Google clicado. Tentando login com pop-up...");
-                signInWithPopup(auth, googleProvider)
-                  .then((result) => {
-                    const user = result.user;
-                    console.log("Usuário logado com Google:", user.displayName, user.email);
-                    showMessage("auth-general-error", "Login com Google bem-sucedido! Redirecionando...", false);
-                    window.location.href = "pages/home.html"; // Redireciona para a página home
-                  })
-                  .catch((error) => {
-                    console.error("Erro no login com Google:", error.code, error.message);
-                    let friendlyMessage = "Falha no login com Google. Tente novamente.";
-                    if (error.code === 'auth/popup-closed-by-user') {
-                      friendlyMessage = "Login cancelado. A janela de pop-up foi fechada.";
-                    } else if (error.code === 'auth/popup-blocked') {
-                      friendlyMessage = "Pop-up bloqueado pelo navegador. Por favor, permita pop-ups e tente novamente.";
-                    } else if (error.code === 'auth/cancelled-popup-request') {
-                        friendlyMessage = "Múltiplas tentativas de login. Tente novamente.";
-                    } else if (error.code === 'auth/unauthorized-domain' || error.code === 'auth/operation-not-allowed') {
-                        friendlyMessage = "Domínio não autorizado ou método de login desabilitado no Firebase.";
-                    }
-                    showMessage("auth-general-error", friendlyMessage);
-                  });
-              });
-            } else {
-              console.warn("Botão de login do Google (ID: google-button) não encontrado.");
-            }
-
-            // --- Lógica de Login com Email/Senha ---
-            const loginButton = document.getElementById("login-button");
-            const loginEmailInput = document.getElementById("login-email");
-            const loginPasswordInput = document.getElementById("login-password");
-
-            if (loginButton && loginEmailInput && loginPasswordInput) {
-              loginButton.addEventListener("click", (event) => {
-                event.preventDefault(); // Previne o envio padrão do formulário
-                clearAllAuthMessages(); // Limpa mensagens de erro anteriores
-
-                const email = loginEmailInput.value.trim();
-                const password = loginPasswordInput.value;
-                let isValid = true;
-
-                if (email === "") {
-                  showMessage("email-error", "O endereço de email é obrigatório.");
-                  isValid = false;
-                } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                  showMessage("email-error", "Por favor, insira um formato de email válido.");
-                  isValid = false;
-                }
-
-                if (password === "") {
-                  showMessage("password-error", "A senha é obrigatória.");
-                  isValid = false;
-                } else if (password.length < 6) { // Firebase exige no mínimo 6 caracteres para senha
-                  showMessage("password-error", "A senha deve ter pelo menos 6 caracteres.");
-                  isValid = false;
-                }
-
-                if (!isValid) {
-                  return;
-                }
-
-                console.log(`Tentando login com Email: ${email}`);
-                signInWithEmailAndPassword(auth, email, password)
-                  .then((userCredential) => {
-                    const user = userCredential.user;
-                    console.log("Usuário logado com Email/Senha:", user.email);
-                    showMessage("auth-general-error", "Login bem-sucedido! Redirecionando...", false);
-                    window.location.href = "pages/home.html"; // Redireciona para a página home
-                  })
-                  .catch((error) => {
-                    console.error("Erro no login com Email/Senha:", error.code, error.message);
-                    if (error.code === 'auth/invalid-email') {
-                      showMessage("email-error", "O formato do email é inválido.");
-                    } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                      showMessage("password-error", "Email ou senha incorretos.");
-                      showMessage("email-error", "Email ou senha incorretos."); // opcional, para indicar ambos os campos
+                    if (googleButton) {
+                        googleButton.addEventListener("click", () => {
+                            clearAllAuthMessages();
+                            console.log("Login Google → popup");
+                            signInWithPopup(auth, googleProvider)
+                                .then(({ user }) => {
+                                    console.log("Google OK:", user.email);
+                                    showMessage("auth-general-error", "Login Google bem‑sucedido! Redirecionando…", false);
+                                    window.location.href = "pages/home.html";
+                                })
+                                .catch(err => handleOauthError(err, "Google"));
+                        });
                     } else {
-                      showMessage("auth-general-error", `Falha no login: ${error.message}`);
+                        console.warn("Botão Google (#google-button) não encontrado.");
                     }
-                  });
-              });
-            } else {
-              console.warn("Elementos do formulário de login (botão, email, senha) não encontrados.");
-            }
 
-            // NOTA: A lógica de SIGN UP (CADASTRO) não foi implementada aqui.
-            // O botão signup-button e os campos signup-email, signup-password existem no HTML,
-            // mas precisarão de um event listener e da função createUserWithEmailAndPassword
-            // similar à lógica de login acima, se desejar implementar o cadastro.
+                    // GitHub
+                    const githubButton = document.getElementById("github-button");
+                    const githubProvider = new GithubAuthProvider();
 
-          } catch (e) {
-            console.error("Erro ao inicializar o Firebase ou configurar listeners:", e);
-            showMessage("auth-general-error", "Erro crítico na configuração da página. Tente recarregar.");
-          }
+                    if (githubButton) {
+                        githubButton.addEventListener("click", () => {
+                            clearAllAuthMessages();
+                            console.log("Login GitHub → popup");
+                            signInWithPopup(auth, githubProvider)
+                                .then(({ user }) => {
+                                    console.log("GitHub OK:", user.email);
+                                    showMessage("auth-general-error", "Login GitHub bem‑sucedido! Redirecionando…", false);
+                                    window.location.href = "pages/home.html";
+                                })
+                                .catch(err => handleOauthError(err, "GitHub"));
+                        });
+                    } else {
+                        console.warn("Botão GitHub (#github-button) não encontrado.");
+                    }
+
+                    function handleOauthError(error, providerName) {
+                        console.error(`Erro ${providerName}:`, error.code, error.message);
+                        let msg = `Falha no login com ${providerName}.`;
+                        switch (error.code) {
+                            case "auth/popup-closed-by-user":
+                                msg = "Login cancelado – a janela foi fechada.";
+                                break;
+                            case "auth/popup-blocked":
+                                msg = "Pop‑up bloqueado. Permita pop‑ups e tente novamente.";
+                                break;
+                            case "auth/cancelled-popup-request":
+                                msg = "Várias janelas abertas. Tente novamente.";
+                                break;
+                            case "auth/account-exists-with-different-credential":
+                                msg = "Já existe uma conta com este email usando outro método.";
+                                break;
+                        }
+                        showMessage("auth-general-error", msg);
+                    }
+                })
+                .catch(err => {
+                    console.error("Falha ao carregar Firebase Auth:", err);
+                    showMessage("auth-general-error", "Não foi possível carregar autenticação.");
+                });
         })
         .catch(err => {
-          console.error("Falha ao carregar o Firebase Auth SDK:", err);
-          showMessage("auth-general-error", "Não foi possível carregar os recursos de autenticação. Verifique sua conexão ou tente mais tarde.");
+            console.error("Falha ao carregar Firebase App SDK:", err);
+            showMessage("auth-general-error", "Erro ao carregar recursos principais.");
         });
-    })
-    .catch(err => {
-      console.error("Falha ao carregar o Firebase App SDK:", err);
-      showMessage("auth-general-error", "Não foi possível carregar os recursos principais. Verifique sua conexão ou tente mais tarde.");
-    });
 });

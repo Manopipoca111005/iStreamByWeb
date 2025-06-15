@@ -1,26 +1,68 @@
+function debounce(func, delay) {
+  let timeoutId;
+  return function (...args) {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => {
+      func.apply(this, args);
+    }, delay);
+  };
+}
+
+function setupProfileDropdown() {
+  const userProfileIcon = document.querySelector(
+    ".user-profile .fa-user-circle"
+  );
+  const profileDropdown = document.querySelector(".profile-dropdown");
+  if (userProfileIcon && profileDropdown) {
+    userProfileIcon.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const isActive = profileDropdown.classList.toggle("active");
+      userProfileIcon.setAttribute("aria-expanded", isActive.toString());
+    });
+    document.addEventListener("click", (event) => {
+      if (
+        !userProfileIcon.contains(event.target) &&
+        !profileDropdown.contains(event.target) &&
+        profileDropdown.classList.contains("active")
+      ) {
+        profileDropdown.classList.remove("active");
+        userProfileIcon.setAttribute("aria-expanded", "false");
+      }
+    });
+  }
+}
+
+
 const TMDB_API_KEY = "f0609e6638ef2bc5b31313a712e7a8a4";
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
 
 let watchLaterList = JSON.parse(localStorage.getItem("watchLater")) || [];
 let currentTrailerKey = "";
-const result = fetch("https://torrentio.strem.fun/stream/movie/tt7068946.json")
-  .then((response) => response.json())
-  .then((data) => {
-    if (data && data.success) {
-      console.log("Data fetched successfully:", data);
-    } else {
-      console.error("Failed to fetch data:", data);
-    }
-  });
 
-const debounce = (func, wait) => {
-  let timeout;
-  return (...args) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(this, args), wait);
-  };
-};
+// Chamada à API Torrentio com tratamento de erro adequado
+fetch("https://torrentio.strem.fun/stream/movie/tt7068946.json")
+  .then((response) => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then((data) => {
+    if (data && data.streams) {  // Alterado para verificar data.streams em vez de data.success
+      console.log("Streaming options fetched successfully:", data.streams.length, "options available");
+      // Aqui você pode processar os dados de streaming recebidos
+      // Exemplo: data.streams contém a lista de opções de streaming
+    } else {
+      console.warn("Unexpected API response structure:", data);
+    }
+  })
+  .catch((error) => {
+    console.error("Failed to fetch streaming data:", error);
+    showNotification("Failed to load streaming options", "error");
+  });
 
 function handleMediaClick(item, type) {
   if (type === "movie") {
@@ -89,21 +131,25 @@ async function handleSearch(query) {
       (item) => item.media_type !== "person" && item.poster_path
     );
 
-    if (results.length === 0) {
+    if (filteredResults.length === 0) {
       resultsGrid.innerHTML = "<p>No results found.</p>";
       spinner.classList.remove("active");
       return;
     }
 
     const fullResults = await Promise.all(
-      results.map(async (item) => {
+      filteredResults.map(async (item) => {
         if (item.id && item.media_type) {
           try {
             const externalIdsResponse = await fetch(
               `${TMDB_BASE_URL}/${item.media_type}/${item.id}/external_ids?api_key=${TMDB_API_KEY}`
             );
             if (externalIdsResponse.ok) {
-              item.imdb_id = (await externalIdsResponse.json()).imdb_id || "";
+              const externalIds = await externalIdsResponse.json();
+              item.imdb_id = externalIds.imdb_id || "";
+              console.log(
+                `[SEARCH] Título: ${item.title || item.name}, TMDB id: ${item.id}, media_type: ${item.media_type}, imdb_id: ${item.imdb_id}`
+              );
             }
           } catch (e) {
             console.warn("Could not fetch external ID.");
@@ -175,6 +221,8 @@ function playMovie(imdbId, type, title, poster, season, episode) {
   if (type === "series" && season && episode) {
     playerUrl += `&season=${season}&episode=${episode}`;
   }
+  console.log("Opening player with URL:", playerUrl);
+  console.log("imbId", imdbId)
   window.open(playerUrl, "_blank");
 }
 
@@ -516,6 +564,94 @@ function showNotification(message, type) {
   setTimeout(() => notification.remove(), 3000);
 }
 
+function showTutorial() {
+  const tutorialSteps = [
+    {
+      element: '.search-bar',
+      title: 'Search',
+      content: 'Search for your favorite movies and TV shows here'
+    },
+    {
+      element: '.sidebar',
+      title: 'Navigation',
+      content: 'Use the sidebar to navigate between different sections'
+    },
+    {
+      element: '.movie-grid',
+      title: 'Content',
+      content: 'Browse through our collection of movies and TV shows'
+    }
+  ];
+
+  let currentStep = 0;
+
+  function showStep(step) {
+    const tutorial = document.createElement('div');
+    tutorial.className = 'tutorial-popup';
+    tutorial.innerHTML = `
+      <h3>${tutorialSteps[step].title}</h3>
+      <p>${tutorialSteps[step].content}</p>
+      <div class="tutorial-buttons">
+        ${step > 0 ? '<button class="tutorial-prev">Previous</button>' : ''}
+        ${step < tutorialSteps.length - 1 ? '<button class="tutorial-next">Next</button>' : '<button class="tutorial-finish">Finish</button>'}
+      </div>
+    `;
+
+    // Position the popup near the element it's describing
+    const element = document.querySelector(tutorialSteps[step].element);
+    if (element) {
+      const rect = element.getBoundingClientRect();
+      tutorial.style.position = 'fixed';
+      tutorial.style.top = `${rect.bottom + 10}px`;
+      tutorial.style.left = `${rect.left}px`;
+    }
+
+    // Remove any existing tutorial popup
+    const existingTutorial = document.querySelector('.tutorial-popup');
+    if (existingTutorial) {
+      existingTutorial.remove();
+    }
+
+    document.body.appendChild(tutorial);
+
+    // Add event listeners
+    const prevBtn = tutorial.querySelector('.tutorial-prev');
+    const nextBtn = tutorial.querySelector('.tutorial-next');
+    const finishBtn = tutorial.querySelector('.tutorial-finish');
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        currentStep--;
+        showStep(currentStep);
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        currentStep++;
+        showStep(currentStep);
+      });
+    }
+
+    if (finishBtn) {
+      finishBtn.addEventListener('click', () => {
+        tutorial.remove();
+        localStorage.setItem('tutorialComplete', 'true');
+      });
+    }
+  }
+
+  // Start the tutorial with the first step
+  showStep(0);
+}
+
+function closeTutorial() {
+  const tutorialDialog = document.querySelector('dialog');
+  if (tutorialDialog && tutorialDialog.open) {
+    tutorialDialog.close();
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   fetchMovies("movie/now_playing", "new-movies", "movie");
   fetchMovies("tv/on_the_air", "new-series", "tv");
@@ -545,4 +681,61 @@ document.addEventListener("DOMContentLoaded", () => {
     helpButton.addEventListener("click", () =>
       document.getElementById("tutorial-modal").showModal()
     );
+
+    const getStartedButton = document.getElementById("get-started-button");
+  if (getStartedButton) {
+    getStartedButton.addEventListener("click", () => {
+      showTutorial();
+      const tutorialModal = document.getElementById("tutorial-modal");
+      if (tutorialModal && tutorialModal.hasAttribute("open")) {
+        tutorialModal.close();
+      }
+    });
+  }
+
+  async function fetchData() {
+    try {
+      const response = await fetch('https://api.consumet.org/movies/flixhq/home');
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      
+      const data = await response.json();
+      
+      // Handle the specific data structure from the API
+      if (data && data.hasOwnProperty('streams') && Array.isArray(data.streams)) {
+        return {
+          success: true,
+          data: data.streams,
+          cacheInfo: {
+            maxAge: data.cacheMaxAge,
+            staleRevalidate: data.staleRevalidate,
+            staleError: data.staleError
+          }
+        };
+      } else {
+        console.warn('Unexpected data structure:', data);
+        return { success: false, error: 'Invalid data structure' };
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    try {
+      showLoadingSpinner();
+      const result = await fetchData();
+      
+      if (result.success && result.data) {
+        displayMovies(result.data);
+      } else {
+        showError('Não foi possível carregar o conteúdo.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      showError('Erro ao carregar conteúdo.');
+    } finally {
+      hideLoadingSpinner();
+    }
+  });
 });

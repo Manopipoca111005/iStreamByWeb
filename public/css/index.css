@@ -25,15 +25,58 @@
     padding: 0;
 }
 
+html, body {
+    height: 100%;
+    width: 100%;
+}
+
 body {
     background: linear-gradient(135deg, #1ba098 0%, #00332c 100%);
+    display: flex !important;
+    flex-direction: column !important;
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    font-family: 'Roboto', sans-serif;
+}
+
+header {
+    flex-shrink: 0;
+    z-index: 100;
+}
+
+footer {
+    flex-shrink: 0;
+    margin-top: auto;
+}
+
+main {
+    flex: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 20px !important;
+    min-height: 0 !important;
+    position: relative !important;
 }
 
 .container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
     animation: fadeIn 1s ease-in;
+}
+
+.container > div {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    max-width: 500px !important;
 }
 
 @keyframes fadeIn {
@@ -148,10 +191,35 @@ input:invalid:not(:placeholder-shown) {
     justify-content: center;
     gap: 0.5rem;
     transition: var(--transition);
+    border: none;
+    cursor: pointer;
+    color: white;
 }
 
 #google-button:hover {
     background: #c1352b;
+    transform: translateY(-2px);
+}
+
+#github-button {
+    background: #333;
+    padding: 1.125rem;
+    border-radius: 2rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: var(--transition);
+    border: none;
+    cursor: pointer;
+    color: white;
+}
+
+#github-button:hover {
+    background: #000;
     transform: translateY(-2px);
 }
 
@@ -167,6 +235,9 @@ input:invalid:not(:placeholder-shown) {
     justify-content: center;
     gap: 0.5rem;
     transition: var(--transition);
+    border: none;
+    cursor: pointer;
+    color: white;
 }
 
 #facebook-button:hover {
@@ -202,17 +273,24 @@ a:hover {
 
 .form-card {
     transition: all 0.3s ease;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
 }
+
 .form-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
 }
+
 .social-button {
     transition: all 0.2s ease;
 }
+
 .social-button:hover {
     transform: scale(1.05);
 }
+
 .loading-overlay {
     display: none;
     position: fixed;
@@ -225,9 +303,11 @@ a:hover {
     align-items: center;
     z-index: 1000;
 }
+
 .loading-overlay.active {
     display: flex;
 }
+
 video {
     width: 100%;
     max-width: 800px;
@@ -261,11 +341,20 @@ video {
     text-align: left;
 }
 
+@media (min-height: 600px) {
+    main {
+        min-height: calc(100vh - 160px) !important;
+    }
+}
+
 @media (max-width: 640px) {
-    .container {
-        padding: 1.5rem;
+    main {
+        padding: 15px !important;
+    }
+
+    .form-card {
         max-width: 90%;
-        margin: 0.5rem;
+        padding: 1.5rem;
     }
 
     .logo {
@@ -281,11 +370,15 @@ video {
         padding: 0.5rem;
         font-size: 0.875rem;
     }
+
+    h2 {
+        font-size: 2rem;
+    }
 }
 
 @media (max-width: 480px) {
-    .container {
-        padding: 1rem;
+    main {
+        padding: 10px !important;
     }
 
     h2 {
@@ -294,5 +387,22 @@ video {
 
     .form-card {
         padding: 1.5rem;
+        max-width: 95%;
     }
+}
+
+.text-center {
+    text-align: center !important;
+}
+
+.flex {
+    display: flex !important;
+}
+
+.items-center {
+    align-items: center !important;
+}
+
+.justify-center {
+    justify-content: center !important;
 }

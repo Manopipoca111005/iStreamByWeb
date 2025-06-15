@@ -597,15 +597,19 @@ body {
 
 .notification {
   position: fixed;
-  top: 20px;
+  top: 80px;
   right: 20px;
   padding: 15px 25px;
   border-radius: 8px;
   color: white;
-  z-index: 1002;
+  z-index: 1005;
   box-shadow: var(--shadow);
-  animation: fireworkNotification 0.4s ease-out;
+  animation: fireworkNotification 0.4s ease-out, fadeOutNotification 0.5s ease-out 2.5s forwards;
 }
+
+.notification.success { background: var(--success-color); }
+.notification.error { background: var(--error-color); }
+.notification.info { background: #2196F3; }
 
 @keyframes fireworkNotification {
   0% {
@@ -724,14 +728,19 @@ body {
 }
 
 .tutorial-modal {
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.92);
   border: none;
   border-radius: 15px;
   padding: 2rem;
   max-width: 600px;
-  width: 90%;
+  margin: auto;
   color: var(--text-color);
   animation: fireworkModal 0.4s ease-out;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+  max-height: 90vh;
+  padding: 1rem;
+  width: calc(100% - 20px);
 }
 
 .tutorial-modal:not([open]) {
@@ -988,4 +997,163 @@ body {
 
 .details-modal strong {
   font-weight: bold;
+}
+
+/* Estilos do Trailer Modal - Mantendo a estrutura existente */
+.trailer-modal {
+  background: rgba(0, 0, 0, 0.92);
+  border: none;
+  border-radius: 15px;
+  padding: 1.5rem;
+  max-width: 800px;
+  width: calc(100% - 40px);
+  margin: auto;
+  color: var(--text-color);
+  animation: fireworkModal 0.4s ease-out;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+
+.trailer-modal::backdrop {
+  background: rgba(0, 0, 0, 0.7);
+  animation: fadeInBackdrop 0.3s ease-out;
+}
+
+.trailer-modal-content {
+  position: relative; /* Adicione esta linha */
+  width: 100%;
+  padding-top: 56.25%;
+  background-color: #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.trailer-modal iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.trailer-modal .close {
+  position: absolute;
+  top: 20px; /* Ajustado para mover mais para dentro */
+  right: 20px; /* Ajustado para mover mais para dentro */
+  background: var(--primary-color); /* Reposto o verde, usando a variável --primary-color */
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background 0.3s ease;
+}
+.trailer-modal .close:hover {
+  background: var(--accent-color);
+  transform: scale(1.1);
+}
+
+/* Responsividade para o modal de trailer */
+@media (max-width: 768px) {
+  .trailer-modal {
+    padding: 1rem;
+    width: calc(100% - 30px);
+  }
+  
+  .trailer-modal .close {
+    top: 5px; /* Ajustado para manter dentro em telas menores */
+    right: 5px; /* Ajustado para manter dentro em telas menores */
+    width: 35px;
+    height: 35px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .trailer-modal {
+    padding: 0.8rem;
+    width: calc(100% - 20px);
+  }
+  
+  .trailer-modal-content {
+    padding-top: 56.25%; /* Manter aspect ratio mesmo em mobile */
+  }
+  
+  .trailer-modal .close {
+    top: 5px; /* Ajustado para manter dentro em telas menores */
+    right: 5px; /* Ajustado para manter dentro em telas menores */
+    width: 30px;
+    height: 30px;
+    font-size: 0.9rem;
+  }
+}
+
+.bottom-nav {
+  display: none;
+  justify-content: space-around;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 75px;
+  background: var(--secondary-color);
+  padding: 0.5rem;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  animation: slideUpNav 0.6s ease-out;
+  overflow: hidden;
+  max-width: 100vw;
+}
+
+.bottom-nav a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--text-color);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.bottom-nav a i {
+  font-size: 2rem;
+}
+
+.bottom-nav a div {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.bottom-nav a.active {
+  color: var(--primary-color);
+}
+
+.bottom-nav a:hover {
+  color: var(--primary-color);
+}
+
+/* Media query para mostrar a navegação inferior em telas móveis */
+@media (max-width: 768px) {
+  .bottom-nav {
+    display: flex;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .main {
+    margin-left: 0;
+    padding-bottom: 85px;
+  }
 }

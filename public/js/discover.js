@@ -33,16 +33,6 @@ const debounce = (func, wait) => {
   };
 };
 
-const showLoading = () => {
-  state.isLoading = true;
-  document.getElementById("loading-spinner")?.classList.add("active");
-};
-
-const hideLoading = () => {
-  state.isLoading = false;
-  document.getElementById("loading-spinner")?.classList.remove("active");
-};
-
 function showNotification(message, type) {
   const notification = document.createElement("div");
   notification.className = `notification ${type}`;
@@ -102,6 +92,7 @@ async function fetchMovies(
   type = state.currentFilter.type,
   params = {}
 ) {
+  console.log('fetchMovies chamado:', endpoint, params);
   showLoading();
   try {
     const queryParams = new URLSearchParams({
@@ -118,7 +109,9 @@ async function fetchMovies(
       queryParams.append("with_genres", state.currentFilter.genre);
     }
 
-    const response = await fetch(`${TMDB_BASE_URL}/${endpoint}?${queryParams}`);
+    const url = `${TMDB_BASE_URL}/${endpoint}?${queryParams}`;
+    console.log('URL final do fetch:', url);
+    const response = await fetch(url);
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
@@ -153,11 +146,24 @@ async function renderMovies(
   if (spinner) spinner.classList.add("active");
   container.innerHTML = "";
 
+  // IMDb ID exclusivo para Deadpool 1
+  const validDeadpoolImdbIds = ["tt1431045"];
   const searchQuery =
     document.getElementById("search-input")?.value.toLowerCase() || "";
-  const filteredResults = state.currentResults.filter((item) =>
-    (item.title || item.name)?.toLowerCase().includes(searchQuery)
-  );
+  // FILTRO EXATO: só aceita "Deadpool" se não houver outros títulos juntos
+  const filteredResults = state.currentResults.filter((item) => {
+    const title = (item.title || item.name || "").toLowerCase();
+    if (!searchQuery) return true;
+    if (!title.includes(searchQuery)) return false;
+    // Se a busca for por "deadpool", só aceita se o título for exatamente deadpool (com ou sem ano, pontuação, etc)
+    if (searchQuery === "deadpool") {
+      // Remove ano, pontuação e espaços extras para comparar
+      const normalized = title.replace(/[^a-z0-9]/gi, " ").replace(/\s+/g, " ").trim();
+      // Aceita se começa com "deadpool" e não tem outros nomes de filmes conhecidos juntos
+      return /^deadpool(\s|$)/.test(normalized);
+    }
+    return true;
+  });
 
   if (filteredResults.length === 0) {
     container.innerHTML = "<p>No results found.</p>";
@@ -250,12 +256,8 @@ async function fetchGenres() {
   showLoading();
   try {
     const [movieGenresResponse, tvGenresResponse] = await Promise.all([
-      fetch(
-        `${TMDB_BASE_URL}/genre/movie/list?api_key=${TMDB_API_KEY}&language=en-US`
-      ),
-      fetch(
-        `${TMDB_BASE_URL}/genre/tv/list?api_key=${TMDB_API_KEY}&language=en-US`
-      ),
+      fetch(`${TMDB_BASE_URL}/genre/movie/list?api_key=${TMDB_API_KEY}&language=pt-BR`), // Alterado para pt-BR
+      fetch(`${TMDB_BASE_URL}/genre/tv/list?api_key=${TMDB_API_KEY}&language=pt-BR`),    // Alterado para pt-BR
     ]);
 
     if (!movieGenresResponse.ok || !tvGenresResponse.ok) {
@@ -265,10 +267,65 @@ async function fetchGenres() {
     const movieGenresData = await movieGenresResponse.json();
     const tvGenresData = await tvGenresResponse.json();
 
-    const combinedGenres = [...movieGenresData.genres, ...tvGenresData.genres];
+    // Mapeamento dos gêneros que você quer manter (com IDs correspondentes do TMDb)
+    const desiredGenres = {
+      // Filmes
+      "Ação": 28,
+      "Animação": 16,
+      "Aventura": 12,
+      "Comédia": 35,
+      "Crime": 80,
+      "Documentário": 99,
+      "Drama": 18,
+      "Família": 10751,
+      "Fantasia": 14,
+      "História": 36,
+      "Horror": 27,
+      "Música": 10402,
+      "Mistério": 9648,
+      "Romance": 10749,
+      "Ficção científica": 878,
+      "Thriller": 53,
+      "Guerra": 10752,
+      "Faroeste": 37,
+      // TV
+      "Cinema TV": 10770  // "TV Movie" em inglês
+    };
+
+    // Filtra apenas os gêneros desejados
+    const combinedGenres = [...movieGenresData.genres, ...tvGenresData.genres]
+      .filter(genre => Object.values(desiredGenres).includes(genre.id));
+
+    // Traduz os nomes para português e remove duplicados
+    const genreMap = {
+      28: "Ação",
+      16: "Animação",
+      12: "Aventura",
+      35: "Comédia",
+      80: "Crime",
+      99: "Documentário",
+      18: "Drama",
+      10751: "Família",
+      14: "Fantasia",
+      36: "História",
+      27: "Horror",
+      10402: "Música",
+      9648: "Mistério",
+      10749: "Romance",
+      878: "Ficção científica",
+      53: "Thriller",
+      10752: "Guerra",
+      37: "Faroeste",
+      10770: "Cinema TV"
+    };
+
     const uniqueGenres = combinedGenres
+      .map(genre => ({
+        id: genre.id,
+        name: genreMap[genre.id] || genre.name // Usa o nome em português se disponível
+      }))
       .reduce((acc, current) => {
-        if (!acc.find((genre) => genre.id === current.id)) {
+        if (!acc.find(g => g.id === current.id)) {
           acc.push(current);
         }
         return acc;
@@ -277,9 +334,11 @@ async function fetchGenres() {
 
     state.genres = uniqueGenres;
     populateGenres(state.genres);
+    
+    console.log("Gêneros carregados:", state.genres); // Para verificação
   } catch (error) {
     console.error("Error loading genres:", error);
-    showNotification("Failed to load genres.", "error");
+    showNotification("Falha ao carregar gêneros.", "error");
   } finally {
     hideLoading();
   }
@@ -287,9 +346,7 @@ async function fetchGenres() {
 
 function populateGenres(genres) {
   const genreDropdownContainer = document.getElementById("genre-dropdown");
-  const modalGenreDropdownContainer = document.getElementById(
-    "modal-genre-dropdown"
-  );
+  const modalGenreDropdownContainer = document.getElementById("modal-genre-dropdown");
 
   if (genreDropdownContainer) genreDropdownContainer.innerHTML = "";
   if (modalGenreDropdownContainer) modalGenreDropdownContainer.innerHTML = "";
@@ -298,18 +355,23 @@ function populateGenres(genres) {
     const button = document.createElement("button");
     button.textContent = genre.name;
     button.setAttribute("role", "menuitem");
-    button.onclick = () => {
+    button.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       filterByGenre(genre.id, genre.name);
-      const activeDropdown = document.querySelector(
-        ".dropdown-menu.active, .dropdown-menu.show"
-      );
-      if (activeDropdown) activeDropdown.classList.remove("active", "show");
+      // Fecha o dropdown após a seleção
+      const dropdown = button.closest(".dropdown-menu");
+      if (dropdown) {
+        dropdown.classList.remove("active", "show");
+        const filterButton = dropdown.previousElementSibling;
+        if (filterButton) {
+          filterButton.setAttribute("aria-expanded", "false");
+        }
+      }
     };
 
-    if (genreDropdownContainer)
-      genreDropdownContainer.appendChild(button.cloneNode(true));
-    if (modalGenreDropdownContainer)
-      modalGenreDropdownContainer.appendChild(button);
+    if (genreDropdownContainer) genreDropdownContainer.appendChild(button);
+    if (modalGenreDropdownContainer) modalGenreDropdownContainer.appendChild(button.cloneNode(true));
   });
 }
 
@@ -352,22 +414,42 @@ async function filterByProvider(providerId, providerName = null) {
 }
 
 async function filterByGenre(genreId, genreName) {
+  console.log('Filtro de gênero acionado:', genreId, genreName, state.currentFilter.type);
   state.currentFilter.genre = genreId;
-  document
-    .querySelectorAll('.filter-button[data-tooltip="Genre Options"]')
+  state.currentFilter.provider = null; // Reset provider filter when genre is selected
+  
+  // Update button text
+  document.querySelectorAll('.filter-button[data-tooltip="Genre Options"]')
     .forEach((btn) => (btn.textContent = genreName));
+  
+  // Reset provider button text
+  document.querySelectorAll('.filter-button[data-tooltip="Provider Options"]')
+    .forEach((btn) => (btn.textContent = "Provider"));
 
-  fetchMovies(
-    `discover/${state.currentFilter.type}`,
-    "movie-grid",
-    state.currentFilter.type,
-    {
-      with_genres: genreId,
-      sort_by: "popularity.desc",
-    }
-  );
+  // Close all dropdowns
+  document.querySelectorAll(".dropdown-menu.active, .dropdown-menu.show")
+    .forEach((menu) => {
+      menu.classList.remove("active", "show");
+      const button = menu.previousElementSibling;
+      if (button) button.setAttribute("aria-expanded", "false");
+    });
+
+  // Fetch movies with genre filter
+  try {
+    await fetchMovies(
+      `discover/${state.currentFilter.type}`, // Corrigido o endpoint
+      "movie-grid",
+      state.currentFilter.type,
+      {
+        with_genres: genreId,
+        sort_by: "popularity.desc",
+      }
+    );
+  } catch (error) {
+    console.error("Error filtering by genre:", error);
+    showNotification("Failed to filter by genre.", "error");
+  }
 }
-
 async function showDetails(item, type) {
   const modal = document.getElementById("details-modal");
   if (!modal) return;
@@ -427,7 +509,7 @@ function playTrailer() {
     const iframe = document.getElementById("trailer-iframe");
     const modal = document.getElementById("trailer-modal");
     if (iframe && modal) {
-      iframe.src = `https://www.youtube.com/embed/$${state.currentTrailerKey}?autoplay=1`;
+      iframe.src = `https://www.youtube.com/embed/${state.currentTrailerKey}?autoplay=1`;
       modal.showModal();
     } else {
       showNotification("Trailer player components not found.", "error");
@@ -781,3 +863,35 @@ window.filterByProvider = filterByProvider;
 window.filterByGenre = filterByGenre;
 window.openFilterModal = openFilterModal;
 window.closeFilterModal = closeFilterModal;
+
+function showGlobalSpinner() {
+  const spinner = document.getElementById('global-spinner');
+  if (spinner) spinner.style.display = 'flex';
+}
+function hideGlobalSpinner() {
+  const spinner = document.getElementById('global-spinner');
+  if (spinner) spinner.style.display = 'none';
+}
+
+const showLoading = () => {
+  state.isLoading = true;
+  document.getElementById("loading-spinner")?.classList.add("active");
+};
+const hideLoading = () => {
+  state.isLoading = false;
+  document.getElementById("loading-spinner")?.classList.remove("active");
+};
+
+function filterByType(type) {
+  state.currentFilter.type = type;
+  state.currentFilter.genre = null;
+  state.currentFilter.provider = null;
+  document
+    .querySelectorAll('.filter-button[data-tooltip="Genre Options"]')
+    .forEach((btn) => (btn.textContent = "Genre"));
+  document
+    .querySelectorAll('.filter-button[data-tooltip="Provider Options"]')
+    .forEach((btn) => (btn.textContent = "Provider"));
+
+  fetchMovies(`${type}/${state.currentFilter.sort}`, "movie-grid", type);
+}

@@ -1,56 +1,51 @@
+// Constantes
 const TMDB_API_KEY = "f0609e6638ef2bc5b31313a712e7a8a4";
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
 const YOUTUBE_EMBED_BASE_URL = "https://www.youtube.com/embed/VIDEO_ID";
 
-let watchLaterItemsGlobal = [];
-let filteredItemsGlobal = [];
-let searchTermGlobal = "";
-let currentTypeFilterGlobal = "all";
-let currentSortByGlobal = "addedDate";
-let currentPlayer = null;
-let currentItemForDetailsTrailer = null;
+// Estado global da aplicação
+const state = {
+  watchLaterItems: [],
+  filteredItems: [],
+  searchTerm: "",
+  currentTypeFilter: "all",
+  currentSortBy: "addedDate",
+  currentPlayer: null,
+  isProcessing: false,
+  isModalOpen: false
+};
 
-function showNotification(message, type = "info") {
-  const existingNotification = document.querySelector(".notification");
-  if (existingNotification) existingNotification.remove();
+// Alias para compatibilidade com código existente
+let watchLaterItemsGlobal = state.watchLaterItems;
+let filteredItemsGlobal = state.filteredItems;
+let searchTermGlobal = state.searchTerm;
+let currentTypeFilterGlobal = state.currentTypeFilter;
+let currentSortByGlobal = state.currentSortBy;
+let currentPlayer = state.currentPlayer;
+let isProcessing = state.isProcessing;
+let isModalOpen = state.isModalOpen;
+let currentTrailerKey = null;
 
+function showNotification(message, type) {
   const notification = document.createElement("div");
   notification.className = `notification ${type}`;
   notification.textContent = message;
   document.body.appendChild(notification);
-
-  if (!document.getElementById("notification-styles-watchlater")) {
-    const style = document.createElement("style");
-    style.id = "notification-styles-watchlater";
-    style.textContent = `
-        .notification { position: fixed; bottom: -70px; left: 50%; transform: translateX(-50%); padding: 12px 25px; border-radius: 8px; color: white; background-color: #333; z-index: 1005; font-size: 0.95rem; opacity: 0; transition: opacity 0.3s ease-in-out, bottom 0.3s ease-in-out; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; }
-        .notification.success { background-color: #4CAF50; }
-        .notification.error { background-color: #f44336; }
-        .notification.info { background-color: #2196F3; }`;
-    document.head.appendChild(style);
-  }
-
-  requestAnimationFrame(() => {
-    notification.style.opacity = "1";
-    notification.style.bottom = "20px";
-  });
-
   setTimeout(() => {
-    notification.style.opacity = "0";
-    notification.style.bottom = "-70px";
-    setTimeout(() => notification.remove(), 350);
+    notification.remove();
   }, 3000);
 }
-
 const loadingSpinnerWatchLater = document.getElementById(
   "loading-spinner-watch-later"
 );
 function showLoading() {
+  const loadingSpinnerWatchLater = document.getElementById("loading-spinner-watch-later");
   if (loadingSpinnerWatchLater) loadingSpinnerWatchLater.style.display = "flex";
   else console.log("A carregar...");
 }
 function hideLoading() {
+  const loadingSpinnerWatchLater = document.getElementById("loading-spinner-watch-later");
   if (loadingSpinnerWatchLater) loadingSpinnerWatchLater.style.display = "none";
   else console.log("Carregamento completo.");
 }
@@ -61,7 +56,7 @@ async function fetchTmdbDetails(itemId, itemType) {
     const lang = "pt-BR";
     const [detailsRes, creditsRes, externalIdsRes] = await Promise.all([
       fetch(
-        `${TMDB_BASE_URL}/${itemType}/${itemId}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=release_dates`
+        `${TMDB_BASE_URL}/${itemType}/${itemId}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=release_dates,videos`
       ),
       fetch(
         `${TMDB_BASE_URL}/${itemType}/${itemId}/credits?api_key=${TMDB_API_KEY}&language=${lang}`
@@ -140,7 +135,7 @@ window.openTrailerModalFromDetails = async function () {
     const trailerModal = document.getElementById("trailer-modal");
     const trailerIframe = document.getElementById("trailer-iframe");
     if (trailerKey && trailerIframe && trailerModal) {
-      trailerIframe.src = `${YOUTUBE_EMBED_BASE_URL}/${trailerKey}?autoplay=1&hl=pt`;
+      trailerIframe.src = `https://www.youtube.com/embed/${state.currentTrailerKey}?autoplay=1`;
       if (typeof trailerModal.showModal === "function")
         trailerModal.showModal();
       else trailerModal.style.display = "flex";
@@ -150,19 +145,49 @@ window.openTrailerModalFromDetails = async function () {
   }
 };
 
-window.closeTrailerModal = function () {
-  const tModal = document.getElementById("trailer-modal");
-  const tIframe = document.getElementById("trailer-iframe");
-  if (tIframe) tIframe.src = "";
-  if (tModal && typeof tModal.close === "function") tModal.close();
-  else if (tModal) tModal.style.display = "none";
-};
+function playTrailer() {
+  if (currentTrailerKey) {
+    const trailerModal = document.getElementById("trailer-modal");
+    const trailerIframe = document.getElementById("trailer-iframe");
+    if (trailerIframe && trailerModal) {
+      trailerIframe.src = `https://www.youtube.com/embed/${currentTrailerKey}?autoplay=1&modestbranding=1&rel=0&vq=hd720`;
+      if (typeof trailerModal.showModal === "function") {
+        trailerModal.showModal();
+      } else {
+        trailerModal.style.display = "block";
+      }
+    }
+  } else {
+    showNotification("Não há trailer disponível para este item.", "info");
+  }
+}
+
+function closeTrailerModal() {
+  const trailerModal = document.getElementById("trailer-modal");
+  const trailerIframe = document.getElementById("trailer-iframe");
+  if (trailerIframe) trailerIframe.src = "";
+  if (trailerModal) {
+    if (typeof trailerModal.close === "function") {
+      trailerModal.close();
+    } else {
+      trailerModal.style.display = "none";
+    }
+  }
+}
 
 // --- MODAL DE DETALHES ROBUSTO ---
 function openDetailsModal(item) {
+  closeAllModals(); // Ensure cleanup before opening
   currentItemForDetailsTrailer = item;
   const detailsModal = document.getElementById("details-modal");
   if (!detailsModal) return;
+
+  // Clean up any existing event listeners
+  const oldModal = document.querySelector('.details-modal[open]');
+  if (oldModal) {
+    oldModal.removeAttribute('open');
+    oldModal.style.display = 'none';
+  }
 
   // Preenche os dados
   (async () => {
@@ -178,8 +203,16 @@ function openDetailsModal(item) {
     const releaseDate = fullDetails.release_date || fullDetails.first_air_date;
     document.getElementById("details-release").textContent = releaseDate ? new Date(releaseDate + "T00:00:00Z").toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "N/A";
     document.getElementById("details-director").textContent = fullDetails.director || "N/A";
-    document.getElementById("details-cast").textContent = fullDetails.cast || "N/A";
-    document.getElementById("details-trailer-button").style.display = "inline-block";
+    document.getElementById("details-cast").textContent = fullDetails.cast || "N/A";    // Verifica a disponibilidade do trailer nos vídeos
+    const trailer = fullDetails.videos?.results.find(
+      (v) => v.type === "Trailer" && v.site === "YouTube"
+    ) || fullDetails.videos?.results.find((v) => v.site === "YouTube");
+    currentTrailerKey = trailer ? trailer.key : "";
+    const trailerButton = document.getElementById("trailer-button");
+    if (trailerButton) {
+      trailerButton.style.display = currentTrailerKey ? "inline-block" : "none";
+    }
+    
     // Abre o modal de forma controlada
     if (typeof detailsModal.showModal === "function") detailsModal.showModal();
     else {
@@ -190,68 +223,326 @@ function openDetailsModal(item) {
 }
 
 function closeDetailsModal() {
-  const detailsModal = document.getElementById("details-modal");
-  if (!detailsModal) return;
-  if (typeof detailsModal.close === "function") detailsModal.close();
-  detailsModal.removeAttribute("open");
-  detailsModal.style.display = "none";
+  const modal = document.getElementById("details-modal");
+  if (!modal) return;
+
+  if (typeof modal.close === 'function') {
+    modal.close();
+  }
+  
+  currentItemForDetailsTrailer = null;
 }
 
-// --- CONTROLE ROBUSTO DE MODAIS GERAIS ---
-function openModal(modalId) {
-  const modal = document.getElementById(modalId);
+// --- FIM MODIFICAÇÕES ---
+
+async function openDetailsModal(item) {
+  if (isProcessing) return;
+  
+  const modal = document.getElementById("details-modal");
   if (!modal) return;
-  if (typeof modal.showModal === "function") modal.showModal();
-  else {
-    modal.setAttribute("open", "true");
-    modal.style.display = "block";
+
+  try {
+    isProcessing = true;
+    document.getElementById("details-title").textContent = "Loading...";
+    document.getElementById("details-overview").textContent = "";
+    document.getElementById("trailer-button").style.display = "none";
+    modal.showModal();
+
+    const itemId = item.id;
+    let itemTypeForApiCall = item.type;
+    if (!itemId || !itemTypeForApiCall) {
+      throw new Error("Missing ID or type for API call.");
+    }
+
+    const response = await fetch(
+      `${TMDB_BASE_URL}/${itemTypeForApiCall}/${itemId}?api_key=${TMDB_API_KEY}&language=pt-BR&append_to_response=videos`
+    );
+    
+    if (!response.ok) {
+      throw new Error("Failed to fetch full details from API.");
+    }
+
+    const details = await response.json();
+    console.log("API Response:", details); // Para debug
+
+    const title = details.title || details.name || "Sem título";
+    document.getElementById("details-title").textContent = title;
+    document.getElementById("details-poster").src = details.poster_path
+      ? `${IMAGE_BASE_URL}${details.poster_path}`
+      : "https://via.placeholder.com/300x450?text=Sem+Poster";
+    document.getElementById("details-poster").alt = `${title} Poster`;
+    document.getElementById("details-overview").textContent =
+      details.overview || "Sem descrição disponível.";
+    document.getElementById("details-rating").textContent =
+      (details.vote_average ? details.vote_average.toFixed(1) : "N/A") + "/10";
+    document.getElementById("details-release").textContent =
+      details.release_date || details.first_air_date || "Desconhecido";
+
+    // Lógica do trailer
+    const trailer =
+      details.videos?.results.find(
+        (v) => v.type === "Trailer" && v.site === "YouTube"
+      ) || details.videos?.results.find((v) => v.site === "YouTube");
+    
+    console.log("Trailer encontrado:", trailer); // Para debug
+    
+    currentTrailerKey = trailer ? trailer.key : "";
+    const trailerButton = document.getElementById("trailer-button");
+    if (trailerButton) {
+      console.log("Estado do botão:", currentTrailerKey ? "mostrar" : "esconder"); // Para debug
+      trailerButton.style.display = currentTrailerKey ? "inline-block" : "none";
+    }
+  } catch (error) {
+    console.error("Error fetching details:", error);
+    showNotification("Não foi possível carregar os detalhes deste item.", "error");
+    if (modal && modal.hasAttribute("open")) modal.close();
+  } finally {
+    isProcessing = false;
   }
 }
+
+function playTrailer() {
+  if (currentTrailerKey) {
+    const iframe = document.getElementById("trailer-iframe");
+    const modal = document.getElementById("trailer-modal");
+    if (iframe && modal) {
+      iframe.src = `https://www.youtube.com/embed/${currentTrailerKey}?autoplay=1&modestbranding=1&rel=0&vq=hd720`;
+      modal.showModal();
+    }
+  } else {
+    showNotification("Não há trailer disponível para este item.", "info");
+  }
+}
+
+function closeTrailerModal() {
+  const iframe = document.getElementById("trailer-iframe");
+  const modal = document.getElementById("trailer-modal");
+  if (iframe) iframe.src = "";
+  if (modal && modal.hasAttribute("open")) modal.close();
+}
+
+// --- FIM MODIFICAÇÕES ---
 
 function closeModal(modalId) {
   const modal = document.getElementById(modalId);
   if (!modal) return;
-  if (typeof modal.close === "function") modal.close();
+
+  // Fecha o modal
+  if (typeof modal.close === 'function') {
+    modal.close();
+  }
   modal.removeAttribute("open");
   modal.style.display = "none";
+
+  // Limpa recursos específicos de cada tipo de modal
+  if (modalId === 'trailer-modal') {
+    const iframe = document.getElementById("trailer-iframe");
+    if (iframe) iframe.src = "";
+  }
 }
 
-function enforceModalCloseOnlyByButton(modalId, closeBtnSelector = "button.action-btn, .close") {
-  document.addEventListener("DOMContentLoaded", function () {
-    const modal = document.getElementById(modalId);
-    if (!modal) return;
-    // Bloqueia ESC e backdrop
-    modal.addEventListener("cancel", (e) => { e.preventDefault(); });
-    modal.addEventListener("close", () => {
-      modal.removeAttribute("open");
-      modal.style.display = "none";
+// --- FIM MODIFICAÇÕES ---
+
+async function openDetailsModal(item) {
+  if (isModalOpen || isProcessing) {
+    return;
+  }
+
+  try {
+    isProcessing = true;
+    showLoading();
+    
+    const details = await fetchTmdbDetails(item.id, item.type);
+    if (!details) {
+      throw new Error("Não foi possível carregar os detalhes");
+    }
+
+    const modal = document.getElementById("details-modal");
+    if (!modal) {
+      throw new Error("Modal não encontrado");
+    }
+
+    // Preenche o conteúdo do modal
+    populateDetailsModal(details, item);
+    
+    // Mostra o modal
+    modal.style.display = "block";
+    if (typeof modal.showModal === 'function') {
+      modal.showModal();
+    }
+    modal.setAttribute("open", "true");
+    
+    isModalOpen = true;
+    currentItemForDetailsTrailer = item;
+    
+  } catch (error) {
+    console.error("Erro ao abrir modal de detalhes:", error);
+    showNotification(error.message || "Erro ao abrir detalhes.", "error");
+  } finally {
+    isProcessing = false;
+    hideLoading();
+  }
+}
+
+// Configura os listeners do modal uma única vez quando a página carrega
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById("details-modal");
+  if (!modal) return;
+
+  // Configurar o botão de fechar
+  const closeButton = modal.querySelector('button[onclick*="details-modal"]');
+  if (closeButton) {
+    closeButton.removeAttribute('onclick'); // Remove o onclick inline
+    closeButton.addEventListener('click', closeDetailsModal);
+  }
+
+  // Prevenir fechamento ao clicar fora
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      e.preventDefault();
+    }
+  });
+
+  // Prevenir fechamento com Escape
+  modal.addEventListener('cancel', (e) => {
+    e.preventDefault();
+  });
+
+  // Garantir limpeza ao fechar
+  modal.addEventListener('close', () => {
+    closeDetailsModal();
+  });
+
+  // Marca a página atual como ativa na navegação inferior
+  function updateCurrentPage() {
+    // Remove active class de todos os itens da navegação
+    document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
+      item.classList.remove('active');
+      item.removeAttribute('aria-current');
     });
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) e.preventDefault();
+    
+    // Adiciona active class e aria-current à página atual
+    const currentPath = window.location.pathname;
+    const currentPage = currentPath.split('/').pop() || 'watch_later.html';
+    const currentNavItem = document.querySelector(`.bottom-nav .nav-item[href="${currentPage}"]`);
+    
+    if (currentNavItem) {
+      currentNavItem.classList.add('active');
+      currentNavItem.setAttribute('aria-current', 'page');
+    }
+  }
+
+  // Chama a função quando a página carregar
+  document.addEventListener('DOMContentLoaded', () => {
+    updateCurrentPage();
+    // ...resto do código existente de inicialização...
+  });
+});
+
+function populateDetailsModal(details, item) {
+  const modal = document.getElementById("details-modal");
+  if (!modal) return;
+
+  try {
+    // Título e ano
+    const title = details.title || details.name;
+    const year = new Date(details.release_date || details.first_air_date).getFullYear();
+    const titleElement = document.getElementById("details-title");
+    if (titleElement) titleElement.textContent = `${title} (${year})`;
+
+    // Poster
+    const posterImg = document.getElementById("details-poster");
+    if (posterImg) {
+      posterImg.src = details.poster_path ? `${IMAGE_BASE_URL}${details.poster_path}` : "images/no-poster.png";
+      posterImg.alt = `Poster de ${title}`;
+    }
+
+    // Preenche as informações com verificação de elemento
+    const elements = {
+      "details-overview": details.overview || "Sem sinopse disponível.",
+      "details-rating": details.vote_average ? `${details.vote_average.toFixed(1)}/10` : "N/A",
+      "details-release": formatDate(details.release_date || details.first_air_date),
+      "details-director": details.director || "N/A",
+      "details-cast": details.cast || "N/A"
+    };
+
+    Object.entries(elements).forEach(([id, value]) => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = value;
     });
-    // Só fecha pelo botão
-    const closeBtn = modal.querySelector(closeBtnSelector);
-    if (closeBtn) {
-      closeBtn.onclick = function (e) {
-        e.preventDefault();
-        closeModal(modalId);
-      };
+
+    // Configurar botão do trailer
+    const trailerButton = document.getElementById("details-trailer-button");
+    if (trailerButton) {
+      if (details.videos?.results?.length > 0) {
+        // Procura por um trailer oficial primeiro
+        const trailer = details.videos.results.find(
+          video => video.type === "Trailer" && video.site === "YouTube"
+        ) || details.videos.results[0];
+        
+        if (trailer) {
+          currentTrailerKey = trailer.key;
+          trailerButton.style.display = "inline-block";
+        } else {
+          currentTrailerKey = null;
+          trailerButton.style.display = "none";
+        }
+      } else {
+        trailerButton.style.display = "none";
+        currentTrailerKey = null;
+      }
+    }
+  } catch (error) {
+    console.error("Erro ao preencher modal:", error);
+    showNotification("Erro ao exibir detalhes.", "error");
+  }
+}
+
+function formatDate(dateString) {
+  if (!dateString) return "N/A";
+  const options = { day: "2-digit", month: "2-digit", year: "numeric" };
+  return new Date(dateString).toLocaleDateString("pt-BR", options);
+}
+
+// Event listeners são configurados no DOMContentLoaded
+
+function closeAllModals() {
+  if (isProcessing) return;
+  
+  return new Promise(resolve => {
+    try {
+      isProcessing = true;
+      
+      // Remove event listeners
+      document.removeEventListener("click", window.__dropdownCloseHandler);
+      document.removeEventListener("keydown", window.__escapeHandler);
+      
+      // Reset state variables
+      currentItemForDetailsTrailer = null;
+      
+      // Close all modals
+      document.querySelectorAll('dialog[open], .dropdown-menu.show').forEach(element => {
+        if (element.classList.contains('dropdown-menu')) {
+          element.classList.remove('show');
+        } else {
+          if (typeof element.close === 'function') element.close();
+          element.removeAttribute('open');
+          element.style.display = 'none';
+        }
+      });
+      
+      // Clean up backdrop and reset body
+      document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+      
+    } finally {
+      isProcessing = false;
+      setTimeout(resolve, 100);
     }
   });
 }
 
-// Aplica para todos os modals relevantes
-['details-modal', 'trailer-modal', 'tutorial-modal'].forEach(id => enforceModalCloseOnlyByButton(id));
-
-function closeAllModals() {
-  document.querySelectorAll('dialog[open]').forEach(modal => {
-    if (typeof modal.close === 'function') modal.close();
-    modal.removeAttribute('open');
-    modal.style.display = '';
-  });
-}
-
 function applyFiltersAndSort() {
+  // Close all modals before applying new filters
   closeAllModals();
   let itemsToDisplay = [...watchLaterItemsGlobal];
 
@@ -261,9 +552,16 @@ function applyFiltersAndSort() {
     );
   }
   if (searchTermGlobal) {
-    itemsToDisplay = itemsToDisplay.filter((item) =>
-      (item.title || item.name || "").toLowerCase().includes(searchTermGlobal)
-    );
+    itemsToDisplay = itemsToDisplay.filter((item) => {
+      const title = (item.title || item.name || "").toLowerCase();
+      if (!title.includes(searchTermGlobal)) return false;
+      // Filtro exato para Deadpool
+      if (searchTermGlobal === "deadpool") {
+        const normalized = title.replace(/[^a-z0-9]/gi, " ").replace(/\s+/g, " ").trim();
+        return /^deadpool(\s|$)/.test(normalized);
+      }
+      return true;
+    });
   }
 
   switch (currentSortByGlobal) {
@@ -293,12 +591,14 @@ function displayWatchLaterItems(itemsToDisplayOnGrid) {
     console.error("Elemento watch-later-grid não encontrado.");
     return;
   }
+  
   grid.innerHTML = "";
 
-  if (!itemsToDisplayOnGrid || itemsToDisplayOnGrid.length === 0) {
+  if (!Array.isArray(itemsToDisplayOnGrid) || itemsToDisplayOnGrid.length === 0) {
     let message = 'A sua lista "Ver Mais Tarde" está vazia.';
-    if (searchTermGlobal || currentTypeFilterGlobal !== "all")
+    if (searchTermGlobal || currentTypeFilterGlobal !== "all") {
       message = "Nenhum item corresponde aos filtros/pesquisa atuais.";
+    }
     grid.innerHTML = `<p style="color: var(--text-color, white); text-align: center; width: 100%; padding: 20px;">${message}</p>`;
     return;
   }
@@ -307,6 +607,7 @@ function displayWatchLaterItems(itemsToDisplayOnGrid) {
     const card = document.createElement("article");
     card.classList.add("watch-later-card");
     card.tabIndex = 0;
+    
     const itemTitle = item.title || item.name || "Título Desconhecido";
     card.setAttribute("aria-label", `Item: ${itemTitle}`);
     const posterUrl = item.poster_path
@@ -331,41 +632,129 @@ function displayWatchLaterItems(itemsToDisplayOnGrid) {
                 <button class="action-btn remove-btn" title="Remover ${itemTitle}" aria-label="Remover ${itemTitle} da lista">Remove</button>
             </div>`;
 
-    card.querySelector(".play-btn")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      playWatchLaterItem(item);
+    // Direct event handlers without safeModalOperation wrapper
+    const playBtn = card.querySelector(".play-btn");
+    const detailsBtn = card.querySelector(".details-btn");
+    const removeBtn = card.querySelector(".remove-btn");
+
+    if (playBtn) {
+      playBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        await playWatchLaterItem(item);
+      });
+    }
+
+    if (detailsBtn) {
+      detailsBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        await closeAllModals();
+        await openDetailsModal(item);
+      });
+    }
+
+    if (removeBtn) {
+      removeBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        await closeAllModals();
+        card.classList.add("removing");
+        await new Promise(resolve => 
+          card.addEventListener('animationend', resolve, { once: true })
+        );
+        removeItemFromStorageAndRefresh(item.id, item.type);
+      });
+    }
+
+    // Card click for details
+    card.addEventListener("click", async (e) => {
+      if (!e.target.closest(".action-btn")) {
+        e.preventDefault();
+        await closeAllModals();
+        await openDetailsModal(item);
+      }
     });
-    card.querySelector(".details-btn")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openDetailsModal(item);
-    });
-    card.querySelector(".remove-btn")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      card.classList.add("removing");
-      card.addEventListener(
-        "animationend",
-        () => removeItemFromStorageAndRefresh(item.id, item.type),
-        { once: true }
-      );
-    });
-    card.addEventListener("click", (e) => {
-      if (!e.target.closest(".action-btn")) openDetailsModal(item);
-    });
-    card.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.target.closest("button"))
-        openDetailsModal(item);
-    });
+
     grid.appendChild(card);
   });
 }
 
-function removeItemFromStorageAndRefresh(itemId, itemType) {
-  watchLaterItemsGlobal = watchLaterItemsGlobal.filter(
-    (item) => !(item.id === itemId && item.type === itemType)
-  );
-  localStorage.setItem("watchLater", JSON.stringify(watchLaterItemsGlobal));
-  applyFiltersAndSort();
-  showNotification("Item removido da lista!", "success");
+async function fetchTmdbDetails(itemId, itemType) {
+  showLoading();
+  try {
+    const lang = "pt-BR";
+    const [detailsRes, creditsRes, externalIdsRes] = await Promise.all([
+      fetch(
+        `${TMDB_BASE_URL}/${itemType}/${itemId}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=release_dates,videos`
+      ),
+      fetch(
+        `${TMDB_BASE_URL}/${itemType}/${itemId}/credits?api_key=${TMDB_API_KEY}&language=${lang}`
+      ),
+      fetch(
+        `${TMDB_BASE_URL}/${itemType}/${itemId}/external_ids?api_key=${TMDB_API_KEY}`
+      ),
+    ]);
+    if (!detailsRes.ok)
+      throw new Error(`Detalhes TMDB: ${detailsRes.statusText}`);
+    if (!creditsRes.ok)
+      throw new Error(`Créditos TMDB: ${creditsRes.statusText}`);
+    if (!externalIdsRes.ok)
+      throw new Error(`IDs Externos TMDB: ${externalIdsRes.statusText}`);
+
+    const details = await detailsRes.json();
+    const credits = await creditsRes.json();
+    const externalIds = await externalIdsRes.json();
+
+    const director =
+      credits.crew?.find((member) => member.job === "Director")?.name || "N/A";
+    const cast =
+      credits.cast
+        ?.slice(0, 5)
+        .map((actor) => actor.name)
+        .join(", ") || "N/A";
+
+    return { ...details, imdb_id: externalIds.imdb_id, director, cast };
+  } catch (error) {
+    console.error("Erro ao obter detalhes TMDB:", error);
+    showNotification("Erro ao carregar detalhes.", "error");
+    return null;
+  } finally {
+    hideLoading();
+  }
+}
+
+async function removeItemFromStorageAndRefresh(itemId, itemType) {
+  if (isProcessing) {
+    return;
+  }
+
+  try {
+    isProcessing = true;
+    showLoading();
+
+    // Fecha o modal de detalhes se estiver aberto
+    closeDetailsModal();
+
+    // Remove o item da lista
+    watchLaterItemsGlobal = watchLaterItemsGlobal.filter(
+      (item) => !(item.id === itemId && item.type === itemType)
+    );
+    
+    // Atualiza o localStorage
+    localStorage.setItem("watchLater", JSON.stringify(watchLaterItemsGlobal));
+    
+    // Atualiza a interface
+    await applyFiltersAndSort();
+    showNotification("Item removido da lista!", "success");
+  } catch (error) {
+    console.error("Erro ao remover item:", error);
+    showNotification("Erro ao remover item.", "error");
+  } finally {
+    hideLoading();
+    isProcessing = false;
+    isModalOpen = false;
+  }
 }
 
 async function playWatchLaterItem(item) {
@@ -466,36 +855,39 @@ window.filterBy = function (filterType, buttonElement) {
 };
 
 window.toggleDropdown = function (button) {
+  // Remove previous handler if exists
+  if (window.__dropdownCloseHandler) {
+    document.removeEventListener("click", window.__dropdownCloseHandler, true);
+    window.__dropdownCloseHandler = null;
+  }
+
   const allDropdowns = document.querySelectorAll(".dropdown-menu");
   const clickedDropdown = button.nextElementSibling;
   if (!clickedDropdown) return;
 
-  document.removeEventListener("click", this.__dropdownCloseHandler, true);
-
   const isActive = clickedDropdown.classList.contains("show");
+  
+  // Close all other dropdowns first
   allDropdowns.forEach((dropdown) => {
-    if (dropdown !== clickedDropdown) {
-      dropdown.classList.remove("show");
-      if (dropdown.previousElementSibling)
-        dropdown.previousElementSibling.setAttribute("aria-expanded", "false");
+    dropdown.classList.remove("show");
+    if (dropdown.previousElementSibling) {
+      dropdown.previousElementSibling.setAttribute("aria-expanded", "false");
     }
   });
 
-  if (isActive) {
-    clickedDropdown.classList.remove("show");
-    button.setAttribute("aria-expanded", "false");
-  } else {
+  if (!isActive) {
     clickedDropdown.classList.add("show");
     button.setAttribute("aria-expanded", "true");
 
-    this.__dropdownCloseHandler = (e) => {
+    window.__dropdownCloseHandler = (e) => {
       if (!button.contains(e.target) && !clickedDropdown.contains(e.target)) {
         clickedDropdown.classList.remove("show");
         button.setAttribute("aria-expanded", "false");
-        document.removeEventListener("click", this.__dropdownCloseHandler, true);
+        document.removeEventListener("click", window.__dropdownCloseHandler, true);
+        window.__dropdownCloseHandler = null;
       }
     };
-    document.addEventListener("click", this.__dropdownCloseHandler, true);
+    document.addEventListener("click", window.__dropdownCloseHandler, true);
   }
 };
 
@@ -515,40 +907,57 @@ window.closeTutorial = function () {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  watchLaterItemsGlobal = JSON.parse(localStorage.getItem("watchLater")) || [];
-  filteredItemsGlobal = [...watchLaterItemsGlobal];
+  // Apply theme immediately before loading content
+  const savedTheme = localStorage.getItem("theme");
+  if (savedTheme === "dark") {
+    document.body.classList.add("dark-theme");
+  }
 
+  // Retrieve and parse watch later items with error handling
+  try {
+    const savedItems = localStorage.getItem("watchLater");
+    console.log("Saved items from localStorage:", savedItems); // Debug log
+    
+    if (savedItems) {
+      watchLaterItemsGlobal = JSON.parse(savedItems);
+      if (!Array.isArray(watchLaterItemsGlobal)) {
+        console.error("Saved items is not an array");
+        watchLaterItemsGlobal = [];
+      }
+    } else {
+      console.log("No saved items found");
+      watchLaterItemsGlobal = [];
+    }
+    
+    filteredItemsGlobal = [...watchLaterItemsGlobal];
+    console.log("Loaded items:", watchLaterItemsGlobal); // Debug log
+  } catch (error) {
+    console.error("Error loading watch later items:", error);
+    watchLaterItemsGlobal = [];
+    filteredItemsGlobal = [];
+  }
+
+  // Display items immediately after loading
   applyFiltersAndSort();
 
+  // Initialize theme toggle button
   const themeToggleButton = document.querySelector(".theme-toggle");
   if (themeToggleButton) {
-    const currentTheme = localStorage.getItem("theme");
-    if (currentTheme === "dark") {
-      document.body.classList.add("dark-theme");
-      themeToggleButton.innerHTML = '<i class="fas fa-sun"></i>';
-      themeToggleButton.setAttribute("data-tooltip", "Mudar para Tema Claro");
-    } else {
-      document.body.classList.remove("dark-theme");
-      themeToggleButton.innerHTML = '<i class="fas fa-moon"></i>';
-      themeToggleButton.setAttribute("data-tooltip", "Mudar para Tema Escuro");
-    }
+    updateThemeButton(themeToggleButton, savedTheme === "dark");
+    
     themeToggleButton.addEventListener("click", () => {
-      document.body.classList.toggle("dark-theme");
-      const isDark = document.body.classList.contains("dark-theme");
+      const isDark = document.body.classList.toggle("dark-theme");
       localStorage.setItem("theme", isDark ? "dark" : "light");
-      themeToggleButton.innerHTML = `<i class="fas fa-${
-        isDark ? "sun" : "moon"
-      }"></i>`;
-      themeToggleButton.setAttribute(
-        "data-tooltip",
-        isDark ? "Mudar para Tema Claro" : "Mudar para Tema Escuro"
-      );
+      updateThemeButton(themeToggleButton, isDark);
       showNotification(
         `Tema alterado para ${isDark ? "Escuro" : "Claro"}!`,
         "success"
       );
     });
   }
+
+  // Apply filters and display items
+  applyFiltersAndSort();
 
   const hamburgerButton = document.querySelector(".hamburger");
   const sidebarElement = document.querySelector(".sidebar");
@@ -613,23 +1022,141 @@ document.addEventListener("DOMContentLoaded", () => {
     document.head.appendChild(styleSheet);
   }
 
-  document.addEventListener("keydown", (event) => {
+  // Global escape handler
+  window.__escapeHandler = (event) => {
     if (event.key === "Escape") {
-      const openModals = document.querySelectorAll("dialog[open]");
-      openModals.forEach((modal) => {
-        if (modal.id === "video-modal") window.closeVideoModal();
-        else if (modal.id === "trailer-modal") window.closeTrailerModal();
-        else if (
-          modal.id === "details-modal" &&
-          typeof modal.close === "function"
-        )
-          modal.close();
-        else if (
-          modal.id === "tutorial-modal" &&
-          typeof modal.close === "function"
-        )
-          modal.close();
-      });
+      closeAllModals();
+      event.preventDefault();
+    }
+  };
+  document.addEventListener("keydown", window.__escapeHandler);
+
+  // Cleanup function for page unload
+  window.addEventListener("unload", () => {
+    closeAllModals();
+    document.removeEventListener("keydown", window.__escapeHandler);
+    if (window.__dropdownCloseHandler) {
+      document.removeEventListener("click", window.__dropdownCloseHandler, true);
     }
   });
 });
+
+// Add this new helper function
+function updateThemeButton(button, isDark) {
+  button.innerHTML = `<i class="fas fa-${isDark ? "sun" : "moon"}"></i>`;
+  button.setAttribute(
+    "data-tooltip",
+    isDark ? "Mudar para Tema Claro" : "Mudar para Tema Escuro"
+  );
+}
+
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// Função auxiliar para controle de operações
+const processOperation = async (operation) => {
+  if (isProcessing) return;
+  try {
+    isProcessing = true;
+    await operation();
+  } finally {
+    isProcessing = false;
+  }
+};
+
+async function openDetailsModal(item) {
+  if (isProcessing) return;
+  
+  const modal = document.getElementById("details-modal");
+  if (!modal) return;
+
+  try {
+    isProcessing = true;
+    document.getElementById("details-title").textContent = "Loading...";
+    document.getElementById("details-overview").textContent = "";
+    document.getElementById("trailer-button").style.display = "none";
+    modal.showModal();
+
+    const itemId = item.id;
+    let itemTypeForApiCall = item.type;
+    if (!itemId || !itemTypeForApiCall) {
+      throw new Error("Missing ID or type for API call.");
+    }
+
+    const response = await fetch(
+      `${TMDB_BASE_URL}/${itemTypeForApiCall}/${itemId}?api_key=${TMDB_API_KEY}&language=pt-BR&append_to_response=videos`
+    );
+    
+    if (!response.ok) {
+      throw new Error("Failed to fetch full details from API.");
+    }
+
+    const details = await response.json();
+    console.log("API Response:", details); // Para debug
+
+    const title = details.title || details.name || "Sem título";
+    document.getElementById("details-title").textContent = title;
+    document.getElementById("details-poster").src = details.poster_path
+      ? `${IMAGE_BASE_URL}${details.poster_path}`
+      : "https://via.placeholder.com/300x450?text=Sem+Poster";
+    document.getElementById("details-poster").alt = `${title} Poster`;
+    document.getElementById("details-overview").textContent =
+      details.overview || "Sem descrição disponível.";
+    document.getElementById("details-rating").textContent =
+      (details.vote_average ? details.vote_average.toFixed(1) : "N/A") + "/10";
+    document.getElementById("details-release").textContent =
+      details.release_date || details.first_air_date || "Desconhecido";
+
+    // Lógica do trailer
+    const trailer =
+      details.videos?.results.find(
+        (v) => v.type === "Trailer" && v.site === "YouTube"
+      ) || details.videos?.results.find((v) => v.site === "YouTube");
+    
+    console.log("Trailer encontrado:", trailer); // Para debug
+    
+    currentTrailerKey = trailer ? trailer.key : "";
+    const trailerButton = document.getElementById("trailer-button");
+    if (trailerButton) {
+      console.log("Estado do botão:", currentTrailerKey ? "mostrar" : "esconder"); // Para debug
+      trailerButton.style.display = currentTrailerKey ? "inline-block" : "none";
+    }
+  } catch (error) {
+    console.error("Error fetching details:", error);
+    showNotification("Não foi possível carregar os detalhes deste item.", "error");
+    if (modal && modal.hasAttribute("open")) modal.close();
+  } finally {
+    isProcessing = false;
+  }
+}
+
+function playTrailer() {
+  if (currentTrailerKey) {
+    const iframe = document.getElementById("trailer-iframe");
+    const modal = document.getElementById("trailer-modal");
+    if (iframe && modal) {
+      iframe.src = `https://www.youtube.com/embed/${currentTrailerKey}?autoplay=1&modestbranding=1&rel=0&vq=hd720`;
+      modal.showModal();
+    }
+  } else {
+    showNotification("Não há trailer disponível para este item.", "info");
+  }
+}
+
+function closeTrailerModal() {
+  const iframe = document.getElementById("trailer-iframe");
+  const modal = document.getElementById("trailer-modal");
+  if (iframe) iframe.src = "";
+  if (modal && modal.hasAttribute("open")) modal.close();
+}
+
+// --- FIM MODIFICAÇÕES ---

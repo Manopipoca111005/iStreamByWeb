@@ -10,9 +10,7 @@ if (themeToggle) {
 }
 
 // Load saved theme
-// Ensure themeToggle is selected again or use the one from above if script execution order is guaranteed.
-// For safety, re-select or check if it exists, especially if this script might run before DOMContentLoaded.
-const currentThemeToggle = document.querySelector('.theme-toggle'); // Re-selecting for safety or use themeToggle if defined in the same immediate scope.
+const currentThemeToggle = document.querySelector('.theme-toggle');
 if (localStorage.getItem('theme') === 'dark') {
     document.body.classList.add('dark-theme');
     if (currentThemeToggle) {
@@ -29,30 +27,76 @@ if (hamburger && sidebar) {
     });
 }
 
-// Save settings
-const saveSettingsButton = document.querySelector('.save-settings');
-if (saveSettingsButton) {
-    saveSettingsButton.addEventListener('click', () => {
-        const notification = document.createElement('div');
-        notification.className = 'notification success';
-        notification.textContent = 'Settings saved successfully!';
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 3000);
+// Function to setup profile dropdown (copied from home.js)
+function setupProfileDropdown() {
+    const userProfileIcon = document.querySelector(
+        ".user-profile .fa-user-circle"
+    );
+    const profileDropdown = document.querySelector(".profile-dropdown");
+    if (userProfileIcon && profileDropdown) {
+        userProfileIcon.addEventListener("click", (event) => {
+            event.stopPropagation();
+            const isActive = profileDropdown.classList.toggle("active");
+            userProfileIcon.setAttribute("aria-expanded", isActive.toString());
+        });
+        document.addEventListener("click", (event) => {
+            if (
+                !userProfileIcon.contains(event.target) &&
+                !profileDropdown.contains(event.target) &&
+                profileDropdown.classList.contains("active")
+            ) {
+                profileDropdown.classList.remove("active");
+                userProfileIcon.setAttribute("aria-expanded", "false");
+            }
+        });
+    }
+}
+
+// Theme toggle (repeated block - merged with the first one for clarity)
+// This block appears to be a duplicate or a slightly modified version of the initial theme toggle.
+// I've kept the initial one as it seems more complete with the load saved theme logic.
+// If this was intended to be separate, please clarify.
+
+const helpButton = document.querySelector(".help-button");
+if (helpButton) {
+    helpButton.addEventListener("click", () =>
+        document.getElementById("tutorial-modal").showModal()
+    );
+}
+
+const getStartedButton = document.getElementById("get-started-button");
+if (getStartedButton) {
+    getStartedButton.addEventListener("click", () => {
+        showTutorial(); // Assuming showTutorial() is defined elsewhere
+        const tutorialModal = document.getElementById("tutorial-modal");
+        if (tutorialModal && tutorialModal.hasAttribute("open")) {
+            tutorialModal.close();
+        }
     });
 }
 
-// Add URL simulation
-const addUrlButton = document.querySelector('.btn.add');
-if (addUrlButton) {
-    addUrlButton.addEventListener('click', () => {
-        const spinner = document.getElementById('streaming-loading');
+function scrollCarousel(containerId, scrollAmount) {
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    }
+}
+
+// Save Real-Debrid API Token
+const saveRealDebridSettingsButton = document.querySelector('.save-realdebrid-settings');
+if (saveRealDebridSettingsButton) {
+    saveRealDebridSettingsButton.addEventListener('click', () => {
+        const realDebridApiToken = document.getElementById('realdebrid-api-token').value;
+        const spinner = document.getElementById('realdebrid-loading');
+
         if (spinner) {
             spinner.classList.add('active');
             setTimeout(() => {
                 spinner.classList.remove('active');
+                localStorage.setItem('realDebridApiToken', realDebridApiToken);
                 const notification = document.createElement('div');
                 notification.className = 'notification success';
-                notification.textContent = 'URL added successfully!';
+                notification.textContent = 'Real-Debrid API Token saved successfully!';
                 document.body.appendChild(notification);
                 setTimeout(() => notification.remove(), 3000);
             }, 1500);
@@ -60,42 +104,16 @@ if (addUrlButton) {
     });
 }
 
-// Reload simulation
-const reloadButton = document.querySelector('.btn.reload');
-if (reloadButton) {
-    reloadButton.addEventListener('click', () => {
-        const spinner = document.getElementById('streaming-loading');
-        if (spinner) {
-            spinner.classList.add('active');
-            setTimeout(() => {
-                spinner.classList.remove('active');
-                const notification = document.createElement('div');
-                notification.className = 'notification success';
-                notification.textContent = 'Connection reloaded!';
-                document.body.appendChild(notification);
-                setTimeout(() => notification.remove(), 3000);
-            }, 1500);
+// Load saved Real-Debrid API Token and setup dropdown on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+    const realDebridApiTokenInput = document.getElementById('realdebrid-api-token');
+    if (realDebridApiTokenInput) {
+        const savedToken = localStorage.getItem('realDebridApiToken');
+        if (savedToken) {
+            realDebridApiTokenInput.value = savedToken;
         }
-    });
-}
+    }
 
-// Trakt authentication simulation
-const authenticateButton = document.querySelector('.authenticate-button');
-if (authenticateButton) {
-    authenticateButton.addEventListener('click', () => {
-        const spinner = document.createElement('div');
-        spinner.className = 'loading-spinner active';
-        const traktSection = document.querySelector('.trakt-section');
-        if (traktSection) {
-            traktSection.appendChild(spinner);
-            setTimeout(() => {
-                spinner.remove();
-                const notification = document.createElement('div');
-                notification.className = 'notification success';
-                notification.textContent = 'Trakt authenticated successfully!';
-                document.body.appendChild(notification);
-                setTimeout(() => notification.remove(), 3000);
-            }, 1500);
-        }
-    });
-}
+    // Call the setupProfileDropdown function here to initialize the profile dropdown
+    setupProfileDropdown();
+});
