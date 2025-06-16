@@ -10,6 +10,15 @@ function debounce(func, delay) {
   };
 }
 
+// NOVA FUNÇÃO: Para escapar strings para HTML
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+}
+
 function setupProfileDropdown() {
   const userProfileIcon = document.querySelector(
     ".user-profile .fa-user-circle"
@@ -61,13 +70,35 @@ fetch("https://torrentio.strem.fun/stream/movie/tt7068946.json")
   });
 
 function handleMediaClick(item, type) {
-  if (type === "movie") {
-    const poster = item.poster_path
-      ? `${IMAGE_BASE_URL}${item.poster_path}`
-      : "https://via.placeholder.com/500x750?text=No+Poster";
-    const titleText = item.title || item.name || "Untitled";
+  const titleText = item.title || item.name || "Untitled";
+  const poster = item.poster_path
+    ? `${IMAGE_BASE_URL}${item.poster_path}`
+    : "https://via.placeholder.com/500x750?text=No+Poster";
+
+  // Identificação específica para "The Making of Deadpool & Wolverine"
+  // ou outros itens que você quer tratar como série, mas que são 'movie' no TMDB.
+  // Use o ID do TMDB para a identificação precisa.
+  if (item.id === 1386628 /* The Making of Deadpool & Wolverine TMDB ID */) {
+    console.log(`[HANDLE MEDIA CLICK] Tratando '${titleText}' (ID: ${item.id}) como série para abrir modal de temporadas/episódios simulados.`);
+    
+    // Criar um objeto "fake" de série com os dados mínimos necessários para openSeriesModal
+    // e para a lógica subsequente de simulação.
+    const fakeSeriesItem = {
+      id: item.id, // Manter o ID original do TMDB
+      name: titleText,
+      imdb_id: item.imdb_id || "tt34570789", // Garantir o IMDb ID correto
+      poster_path: item.poster_path,
+      overview: item.overview,
+      // Não é estritamente necessário para o modal, mas bom para consistência
+      media_type: "tv" // Forçar para 'tv' para que openSeriesModal aceite
+    };
+    openSeriesModal(fakeSeriesItem);
+
+  } else if (type === "movie") {
+    // Lógica original para filmes
     playMovie(item.imdb_id, "movie", titleText, poster);
   } else if (type === "tv" || type === "series") {
+    // Lógica original para séries
     openSeriesModal(item);
   } else {
     showNotification("Unsupported media type.", "error");
@@ -159,24 +190,24 @@ async function handleSearch(query) {
       .map((item, index) => {
         const poster = `${IMAGE_BASE_URL}${item.poster_path}`;
         const titleText = item.title || item.name || "Untitled";
-        const itemJSON = JSON.stringify(item).replace(/'/g, "'");
+        // ALTERAÇÃO AQUI: Usar escapeHtml para o JSON
+        const itemJSON = escapeHtml(JSON.stringify(item));
         return `
-                <article class="movie-card" style="--i: ${index + 1};">
-                    <img src="${poster}" alt="${titleText} Poster">
-                    <div class="carousel-item-overlay">
-                        <button class="play-btn" data-item='${itemJSON}'>Play</button>
-                        <button class="details-btn" data-item='${itemJSON}'>View Details</button>
-                        <button class="watch-later-btn" data-item='${itemJSON}'>Add to Watch Later</button>
-                    </div>
-                    <div class="carousel-item-content">
-                        <h3>${titleText}</h3>
-                        <p>Rating: ${
-                          item.vote_average
-                            ? item.vote_average.toFixed(1)
-                            : "N/A"
-                        }/10</p>
-                    </div>
-                </article>`;
+                        <article class="movie-card" style="--i: ${index + 1};">
+                            <img src="${poster}" alt="${titleText} Poster">
+                            <div class="carousel-item-overlay">
+                                <button class="play-btn" data-item="${itemJSON}">Play</button>
+                                <button class="details-btn" data-item="${itemJSON}">View Details</button>
+                                <button class="watch-later-btn" data-item="${itemJSON}">Add to Watch Later</button>
+                            </div>
+                            <div class="carousel-item-content">
+                                <h3>${titleText}</h3>
+                                <p>Rating: ${item.vote_average
+                                ? item.vote_average.toFixed(1)
+                                : "N/A"
+                            }/10</p>
+                            </div>
+                        </article>`;
       })
       .join("");
 
@@ -238,7 +269,8 @@ function addEventListenersToContainer(containerId) {
     if (!itemDataString) return;
 
     try {
-      const itemData = JSON.parse(itemDataString);
+      // ALTERAÇÃO AQUI: Removida a chamada decodeURIComponent, pois o .dataset já decodifica entidades HTML
+      const itemData = JSON.parse(itemDataString); // Deve funcionar agora com JSON escapado para HTML
       const itemType = itemData.media_type || (itemData.title ? "movie" : "tv");
 
       if (button.classList.contains("play-btn")) {
@@ -304,19 +336,19 @@ async function fetchMovies(endpoint, containerId, type) {
           ? `${IMAGE_BASE_URL}${item.poster_path}`
           : "https://via.placeholder.com/200x280?text=No+Poster";
         const titleText = item.title || item.name || "Untitled";
-        const itemJSON = JSON.stringify(item).replace(/'/g, "'");
+        // ALTERAÇÃO AQUI: Usar escapeHtml para o JSON
+        const itemJSON = escapeHtml(JSON.stringify(item));
         return `
             <div class="carousel-item" style="--i: ${index + 1};">
                 <img src="${poster}" alt="${titleText} Poster">
                 <div class="carousel-item-overlay">
-                    <button class="play-btn" data-item='${itemJSON}'>Play</button>
-                    <button class="details-btn" data-item='${itemJSON}'>View Details</button>
-                    <button class="watch-later-btn" data-item='${itemJSON}'>Add to Watch Later</button>
+                    <button class="play-btn" data-item="${itemJSON}">Play</button>
+                    <button class="details-btn" data-item="${itemJSON}">View Details</button>
+                    <button class="watch-later-btn" data-item="${itemJSON}">Add to Watch Later</button>
                 </div>
                 <div class="carousel-item-content">
                     <h3>${titleText}</h3>
-                    <p>Rating: ${
-                      item.vote_average ? item.vote_average.toFixed(1) : "N/A"
+                    <p>Rating: ${item.vote_average ? item.vote_average.toFixed(1) : "N/A"
                     }/10</p>
                 </div>
             </div>`;
@@ -349,84 +381,127 @@ async function openSeriesModal(seriesData) {
   modal.showModal();
 
   try {
-    const response = await fetch(
-      `${TMDB_BASE_URL}/tv/${seriesData.id}?api_key=${TMDB_API_KEY}&language=en-US`
-    );
-    if (!response.ok) throw new Error("Failed to fetch series details.");
-    const details = await response.json();
+    // VERIFICAÇÃO PARA O ITEM ESPECÍFICO QUE VOCÊ QUER SIMULAR
+    if (seriesData.id === 1386628) {
+      console.log("Simulando temporadas para o item específico.");
+      // Hardcode das temporadas para este item.
+      // Você pode adicionar mais botões de temporada se for necessário, mas para um "making of", uma temporada deve ser suficiente.
+      seasonsList.innerHTML = `
+        <button onclick="fetchEpisodes(${seriesData.id}, 1, '${seriesData.imdb_id}', this, true)">Season 1 (Special)</button>
+      `;
+    } else {
+      // Lógica original para séries reais do TMDB
+      const response = await fetch(
+        `${TMDB_BASE_URL}/tv/${seriesData.id}?api_key=${TMDB_API_KEY}&language=en-US`
+      );
+      if (!response.ok) throw new Error("Failed to fetch series details.");
+      const details = await response.json();
 
-    seasonsList.innerHTML = details.seasons
-      .filter((season) => season.season_number > 0)
-      .map(
-        (season) =>
-          `<button onclick="fetchEpisodes(${seriesData.id}, ${season.season_number}, '${seriesData.imdb_id}', this)">${season.name}</button>`
-      )
-      .join("");
+      seasonsList.innerHTML = details.seasons
+        .filter((season) => season.season_number > 0)
+        .map(
+          (season) =>
+            `<button onclick="fetchEpisodes(${seriesData.id}, ${season.season_number}, '${seriesData.imdb_id}', this, false)">${season.name}</button>`
+        )
+        .join("");
+    }
   } catch (error) {
     console.error("Error fetching seasons:", error);
     seasonsList.innerHTML =
       '<p class="error-message">Could not load seasons.</p>';
   }
-if (window.innerWidth <= 768) {
-  modal.style.maxWidth = '95vw';
-  modal.style.width = '95vw';
-  modal.style.padding = '1rem';
-}
+  if (window.innerWidth <= 768) {
+    modal.style.maxWidth = '95vw';
+    modal.style.width = '95vw';
+    modal.style.padding = '1rem';
+  }
 }
 function showSeasonsList() {
   const seasonsContainer = document.querySelector('.seasons-container');
   const episodesContainer = document.querySelector('.episodes-container');
-  
+
   seasonsContainer.classList.remove('hidden');
   episodesContainer.classList.add('hidden');
 }
 
-async function fetchEpisodes(seriesId, seasonNumber, seriesImdbId, seasonButton) {
+async function fetchEpisodes(seriesId, seasonNumber, seriesImdbId, seasonButton, isSimulated = false) {
   const episodesList = document.getElementById('episodes-list');
   const seasonsContainer = document.querySelector('.seasons-container');
   const episodesContainer = document.querySelector('.episodes-container');
-  
+
   episodesList.innerHTML = '<div class="loading-spinner active"><i class="fas fa-spinner fa-spin"></i></div>';
 
   document.querySelectorAll('#seasons-list button').forEach(btn => btn.classList.remove('active'));
   if (seasonButton) seasonButton.classList.add('active');
 
   try {
-    if (!seriesImdbId) {
-      try {
-        const externalIdsResponse = await fetch(`${TMDB_BASE_URL}/tv/${seriesId}/external_ids?api_key=${TMDB_API_KEY}`);
-        if (externalIdsResponse.ok) {
-          const externalIds = await externalIdsResponse.json();
-          seriesImdbId = externalIds.imdb_id || '';
+    let poster = 'https://via.placeholder.com/500x750?text=No+Poster'; // Default poster
+
+    // Lógica para o item simulado
+    if (isSimulated && seriesId === 1386628 && seasonNumber === 1) {
+        console.log("Simulando episódios para o item específico.");
+        // Hardcode dos episódios para a "Temporada 1 (Special)" deste item.
+        // Se houver apenas um "episódio", crie um.
+        const episodeName = "The Making of Deadpool & Wolverine"; // Ou outro nome mais específico
+        const fullTitle = `${episodeName}`; // Pode simplificar o título para este caso
+        seriesImdbId = seriesImdbId || "tt34570789"; // Garantir que o IMDb ID está presente
+        
+        // Use a imagem do poster do item original se disponível
+        const itemData = JSON.parse(seasonButton.closest('.carousel-item, .movie-card').querySelector('[data-item]').dataset.item);
+        if (itemData && itemData.poster_path) {
+            poster = `${IMAGE_BASE_URL}${itemData.poster_path}`;
         }
-      } catch (error) {
-        console.warn('Failed to fetch fallback IMDb ID:', error);
+
+        episodesList.innerHTML = `
+            <button class="episode-button"
+                    data-imdb-id="${seriesImdbId}"
+                    data-type="movie" // **IMPORTANTE**: Para o player, este ainda é um 'movie'
+                    data-title="${escapeHtml(fullTitle)}"
+                    data-poster="${poster}"
+                    data-season="1"
+                    data-episode="1">
+              <span>${episodeName}</span>
+              <i class="fas fa-play play-icon"></i>
+            </button>
+        `;
+    } else {
+      // Lógica original para séries reais do TMDB
+      if (!seriesImdbId) {
+        try {
+          const externalIdsResponse = await fetch(`${TMDB_BASE_URL}/tv/${seriesId}/external_ids?api_key=${TMDB_API_KEY}`);
+          if (externalIdsResponse.ok) {
+            const externalIds = await externalIdsResponse.json();
+            seriesImdbId = externalIds.imdb_id || '';
+          }
+        } catch (error) {
+          console.warn('Failed to fetch fallback IMDb ID:', error);
+        }
       }
+
+      const response = await fetch(`${TMDB_BASE_URL}/tv/${seriesId}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=en-US`);
+      if (!response.ok) throw new Error('Failed to fetch episodes.');
+      const seasonDetails = await response.json();
+
+      poster = seasonDetails.poster_path
+        ? `${IMAGE_BASE_URL}${seasonDetails.poster_path}`
+        : 'https://via.placeholder.com/500x750?text=No+Poster';
+
+      episodesList.innerHTML = seasonDetails.episodes.map((episode) => {
+        const title = `${episode.episode_number}. ${episode.name}`;
+        const fullTitle = `${seasonDetails.name} - ${title}`;
+        return `
+          <button class="episode-button"
+                  data-imdb-id="${seriesImdbId}"
+                  data-type="series"
+                  data-title="${escapeHtml(fullTitle)}"
+                  data-poster="${poster}"
+                  data-season="${seasonNumber}"
+                  data-episode="${episode.episode_number}">
+            <span>${title}</span>
+            <i class="fas fa-play play-icon"></i>
+          </button>`;
+      }).join('');
     }
-
-    const response = await fetch(`${TMDB_BASE_URL}/tv/${seriesId}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=en-US`);
-    if (!response.ok) throw new Error('Failed to fetch episodes.');
-    const seasonDetails = await response.json();
-
-    const poster = seasonDetails.poster_path 
-      ? `${IMAGE_BASE_URL}${seasonDetails.poster_path}`
-      : 'https://via.placeholder.com/500x750?text=No+Poster';
-
-    episodesList.innerHTML = seasonDetails.episodes.map((episode) => {
-      const title = `${episode.episode_number}. ${episode.name}`;
-      const fullTitle = `${seasonDetails.name} - ${title}`;
-      return `
-        <button class="episode-button" 
-                data-imdb-id="${seriesImdbId}" 
-                data-type="series" 
-                data-title="${fullTitle.replace(/"/g, '"')}" 
-                data-poster="${poster}" 
-                data-season="${seasonNumber}" 
-                data-episode="${episode.episode_number}">
-          <span>${title}</span>
-          <i class="fas fa-play play-icon"></i>
-        </button>`;
-    }).join('');
 
     if (window.innerWidth <= 768) {
       seasonsContainer.classList.add('hidden');
@@ -445,6 +520,7 @@ function setupSeriesModalEventListeners() {
       const button = event.target.closest(".episode-button");
       if (!button) return;
 
+      // ALTERAÇÃO AQUI: Não precisa de decodeURIComponent para data-attributes que não são JSON
       const { imdbId, type, title, poster, season, episode } = button.dataset;
       playMovie(imdbId, type, title, poster, season, episode);
     });
@@ -656,9 +732,8 @@ document.addEventListener("DOMContentLoaded", () => {
       document.body.classList.toggle("dark-theme");
       const isDark = document.body.classList.contains("dark-theme");
       localStorage.setItem("theme", isDark ? "dark" : "light");
-      themeToggle.innerHTML = `<i class="fas fa-${
-        isDark ? "sun" : "moon"
-      }"></i>`;
+      themeToggle.innerHTML = `<i class="fas fa-${isDark ? "sun" : "moon"
+        }"></i>`;
     });
     if (localStorage.getItem("theme") === "dark") {
       document.body.classList.add("dark-theme");
@@ -672,7 +747,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("tutorial-modal").showModal()
     );
 
-    const getStartedButton = document.getElementById("get-started-button");
+  const getStartedButton = document.getElementById("get-started-button");
   if (getStartedButton) {
     getStartedButton.addEventListener("click", () => {
       showTutorial();
@@ -687,9 +762,9 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const response = await fetch('https://api.consumet.org/movies/flixhq/home');
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      
+
       const data = await response.json();
-      
+
       if (data && data.hasOwnProperty('streams') && Array.isArray(data.streams)) {
         return {
           success: true,
@@ -712,19 +787,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.addEventListener('DOMContentLoaded', async () => {
     try {
-      showLoadingSpinner();
+      // showLoadingSpinner(); // Remova esta linha se showLoadingSpinner não estiver definida
       const result = await fetchData();
-      
+
       if (result.success && result.data) {
-        displayMovies(result.data);
+        // displayMovies(result.data); // Remova esta linha se displayMovies não estiver definida
       } else {
-        showError('Não foi possível carregar o conteúdo.');
+        // showError('Não foi possível carregar o conteúdo.'); // Remova esta linha se showError não estiver definida
       }
     } catch (error) {
       console.error('Error:', error);
-      showError('Erro ao carregar conteúdo.');
+      // showError('Erro ao carregar conteúdo.'); // Remova esta linha se showError não estiver definida
     } finally {
-      hideLoadingSpinner();
+      // hideLoadingSpinner(); // Remova esta linha se hideLoadingSpinner não estiver definida
     }
   });
 });

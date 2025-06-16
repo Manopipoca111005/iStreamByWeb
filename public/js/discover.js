@@ -56,7 +56,7 @@ function addEventListenersToContainer(containerId) {
     if (!button || !button.dataset.item) return;
 
     try {
-      const itemData = JSON.parse(button.dataset.item);
+      const itemData = JSON.parse(button.dataset.item.replace(/&quot;/g, '"'));
       const itemType = itemData.media_type || state.currentFilter.type;
 
       if (button.classList.contains("play-btn")) {
@@ -67,7 +67,8 @@ function addEventListenersToContainer(containerId) {
           itemData.imdb_id,
           itemType,
           itemData.title || itemData.name,
-          poster
+          poster,
+          itemData 
         );
       } else if (button.classList.contains("details-btn")) {
         showDetails(itemData, itemType);
@@ -146,22 +147,23 @@ async function renderMovies(
   if (spinner) spinner.classList.add("active");
   container.innerHTML = "";
 
-  // IMDb ID exclusivo para Deadpool 1
-  const validDeadpoolImdbIds = ["tt1431045"];
+  const validTypes = ["movie", "tv"];
   const searchQuery =
     document.getElementById("search-input")?.value.toLowerCase() || "";
-  // FILTRO EXATO: só aceita "Deadpool" se não houver outros títulos juntos
+
   const filteredResults = state.currentResults.filter((item) => {
+    const itemType = item.media_type || type;
+    if (!validTypes.includes(itemType)) return false;
+
     const title = (item.title || item.name || "").toLowerCase();
     if (!searchQuery) return true;
     if (!title.includes(searchQuery)) return false;
-    // Se a busca for por "deadpool", só aceita se o título for exatamente deadpool (com ou sem ano, pontuação, etc)
+
     if (searchQuery === "deadpool") {
-      // Remove ano, pontuação e espaços extras para comparar
       const normalized = title.replace(/[^a-z0-9]/gi, " ").replace(/\s+/g, " ").trim();
-      // Aceita se começa com "deadpool" e não tem outros nomes de filmes conhecidos juntos
       return /^deadpool(\s|$)/.test(normalized);
     }
+
     return true;
   });
 
@@ -174,16 +176,22 @@ async function renderMovies(
   const itemsToRender = await Promise.all(
     filteredResults.map(async (item) => {
       let imdbId = "";
-      try {
-        const externalIdsResponse = await fetch(
-          `${TMDB_BASE_URL}/${type}/${item.id}/external_ids?api_key=${TMDB_API_KEY}`
-        );
-        if (externalIdsResponse.ok) {
-          const externalIds = await externalIdsResponse.json();
-          imdbId = externalIds.imdb_id || "";
+      const itemType = item.media_type || type;
+      if (itemType === "movie" || itemType === "tv") {
+        try {
+          const externalIdsResponse = await fetch(
+            `${TMDB_BASE_URL}/${itemType}/${item.id}/external_ids?api_key=${TMDB_API_KEY}`
+          );
+          if (externalIdsResponse.ok) {
+            const externalIds = await externalIdsResponse.json();
+            imdbId = externalIds.imdb_id || "";
+          } else if (externalIdsResponse.status !== 404) {
+            console.warn(`Erro ao buscar external_ids para ${itemType}/${item.id}`, externalIdsResponse.status);
+          }
+
+        } catch (error) {
+          console.warn("Error fetching IMDb ID for item:", item.id, error);
         }
-      } catch (error) {
-        console.warn("Error fetching IMDb ID for item:", item.id, error);
       }
       item.imdb_id = imdbId;
       return item;
@@ -194,38 +202,34 @@ async function renderMovies(
     .map((item, index) => {
       const poster = item.poster_path
         ? `${IMAGE_BASE_URL}${item.poster_path}`
-        : "https://via.placeholder.com/200x280?text=No+Poster";
+        : "https://dummyimage.com/200x280/cccccc/000000&text=No+Poster";
       const title = item.title || item.name;
       const rating = item.vote_average ? item.vote_average.toFixed(1) : "N/A";
-      const itemJSON = JSON.stringify(item).replace(/'/g, "&#39;");
+      const itemJSON = JSON.stringify(item);
+      const itemType = item.media_type || type;
       const isInWatchLater = state.watchLater.some(
-        (w) => w.id === item.id && w.type === type
+        (w) => w.id === item.id && w.type === itemType
       );
 
       return `
-            <article class="movie-card" style="--i: ${
-              index + 1
-            };" tabindex="0" aria-label="Details for ${title}">
-                <img src="${poster}" alt="${title} Poster">
-                <div class="movie-card-overlay">
-                    ${
-                      item.imdb_id
-                        ? `<button class="play-btn" data-item='${itemJSON}'>Play ${
-                            type === "movie" ? "Movie" : "Series"
-                          }</button>`
-                        : "<button disabled>Play Unavailable</button>"
-                    }
-                    <button class="details-btn" data-item='${itemJSON}'>View Details</button>
-                    <button class="watch-later-btn" data-item='${itemJSON}'>${
-        isInWatchLater ? "Remove from Watch Later" : "Add to Watch Later"
-      }</button>
-                </div>
-                <div class="movie-card-content">
-                    <h3>${title}</h3>
-                    <p>Rating: ${rating}/10</p>
-                </div>
-            </article>
-        `;
+        <article class="movie-card" style="--i: ${index + 1};" tabindex="0" aria-label="Details for ${title}">
+            <img src="${poster}" alt="${title} Poster">
+            <div class="movie-card-overlay">
+                ${item.imdb_id
+          ? `<button class="play-btn" data-item="${itemJSON.replace(/"/g, '&quot;')}">Play ${itemType === "movie" ? "Movie" : "Series"
+          }</button>`
+          : "<button disabled>Play Unavailable</button>"
+        }
+                <button class="details-btn" data-item="${itemJSON.replace(/"/g, '&quot;')}">View Details</button>
+                <button class="watch-later-btn" data-item="${itemJSON.replace(/"/g, '&quot;')}">${isInWatchLater ? "Remove from Watch Later" : "Add to Watch Later"
+        }</button>
+            </div>
+            <div class="movie-card-content">
+                <h3>${title}</h3>
+                <p>Rating: ${rating}/10</p>
+            </div>
+        </article>
+      `;
     })
     .join("");
 
@@ -234,19 +238,32 @@ async function renderMovies(
   if (spinner) spinner.classList.remove("active");
 }
 
-function playMovie(imdbId, type, title, poster) {
-  if (!imdbId) {
+
+function playMovie(imdbId, type, title, poster, itemData, season = null, episode = null) {
+  if (!imdbId && type === "movie") {
     showNotification(
       "Não é possível reproduzir: ID do IMDb está faltando.",
       "error"
     );
     return;
   }
-  const playerUrl = `player.html?imdbId=${imdbId}&type=${type}&title=${encodeURIComponent(
+
+  if (type === "tv") {
+    openSeriesModal(itemData);
+    return;
+  }
+
+  let playerUrl = `player.html?imdbId=${imdbId}&type=${type}&title=${encodeURIComponent(
     title
   )}&poster=${encodeURIComponent(poster)}`;
+
+  if (type === "series" && season && episode) {
+    playerUrl += `&season=${season}&episode=${episode}`;
+  }
+
   window.open(playerUrl, "_blank");
 }
+
 
 async function fetchGenres() {
   if (state.genres) {
@@ -256,8 +273,8 @@ async function fetchGenres() {
   showLoading();
   try {
     const [movieGenresResponse, tvGenresResponse] = await Promise.all([
-      fetch(`${TMDB_BASE_URL}/genre/movie/list?api_key=${TMDB_API_KEY}&language=pt-BR`), // Alterado para pt-BR
-      fetch(`${TMDB_BASE_URL}/genre/tv/list?api_key=${TMDB_API_KEY}&language=pt-BR`),    // Alterado para pt-BR
+      fetch(`${TMDB_BASE_URL}/genre/movie/list?api_key=${TMDB_API_KEY}&language=pt-BR`),
+      fetch(`${TMDB_BASE_URL}/genre/tv/list?api_key=${TMDB_API_KEY}&language=pt-BR`),
     ]);
 
     if (!movieGenresResponse.ok || !tvGenresResponse.ok) {
@@ -267,9 +284,7 @@ async function fetchGenres() {
     const movieGenresData = await movieGenresResponse.json();
     const tvGenresData = await tvGenresResponse.json();
 
-    // Mapeamento dos gêneros que você quer manter (com IDs correspondentes do TMDb)
     const desiredGenres = {
-      // Filmes
       "Ação": 28,
       "Animação": 16,
       "Aventura": 12,
@@ -288,15 +303,12 @@ async function fetchGenres() {
       "Thriller": 53,
       "Guerra": 10752,
       "Faroeste": 37,
-      // TV
-      "Cinema TV": 10770  // "TV Movie" em inglês
+      "Cinema TV": 10770
     };
 
-    // Filtra apenas os gêneros desejados
     const combinedGenres = [...movieGenresData.genres, ...tvGenresData.genres]
       .filter(genre => Object.values(desiredGenres).includes(genre.id));
 
-    // Traduz os nomes para português e remove duplicados
     const genreMap = {
       28: "Ação",
       16: "Animação",
@@ -322,7 +334,7 @@ async function fetchGenres() {
     const uniqueGenres = combinedGenres
       .map(genre => ({
         id: genre.id,
-        name: genreMap[genre.id] || genre.name // Usa o nome em português se disponível
+        name: genreMap[genre.id] || genre.name
       }))
       .reduce((acc, current) => {
         if (!acc.find(g => g.id === current.id)) {
@@ -334,8 +346,8 @@ async function fetchGenres() {
 
     state.genres = uniqueGenres;
     populateGenres(state.genres);
-    
-    console.log("Gêneros carregados:", state.genres); // Para verificação
+
+    console.log("Gêneros carregados:", state.genres);
   } catch (error) {
     console.error("Error loading genres:", error);
     showNotification("Falha ao carregar gêneros.", "error");
@@ -359,7 +371,6 @@ function populateGenres(genres) {
       e.preventDefault();
       e.stopPropagation();
       filterByGenre(genre.id, genre.name);
-      // Fecha o dropdown após a seleção
       const dropdown = button.closest(".dropdown-menu");
       if (dropdown) {
         dropdown.classList.remove("active", "show");
@@ -416,17 +427,14 @@ async function filterByProvider(providerId, providerName = null) {
 async function filterByGenre(genreId, genreName) {
   console.log('Filtro de gênero acionado:', genreId, genreName, state.currentFilter.type);
   state.currentFilter.genre = genreId;
-  state.currentFilter.provider = null; // Reset provider filter when genre is selected
-  
-  // Update button text
+  state.currentFilter.provider = null;
+
   document.querySelectorAll('.filter-button[data-tooltip="Genre Options"]')
     .forEach((btn) => (btn.textContent = genreName));
-  
-  // Reset provider button text
+
   document.querySelectorAll('.filter-button[data-tooltip="Provider Options"]')
     .forEach((btn) => (btn.textContent = "Provider"));
 
-  // Close all dropdowns
   document.querySelectorAll(".dropdown-menu.active, .dropdown-menu.show")
     .forEach((menu) => {
       menu.classList.remove("active", "show");
@@ -434,10 +442,9 @@ async function filterByGenre(genreId, genreName) {
       if (button) button.setAttribute("aria-expanded", "false");
     });
 
-  // Fetch movies with genre filter
   try {
     await fetchMovies(
-      `discover/${state.currentFilter.type}`, // Corrigido o endpoint
+      `discover/${state.currentFilter.type}`,
       "movie-grid",
       state.currentFilter.type,
       {
@@ -473,9 +480,8 @@ async function showDetails(item, type) {
     document.getElementById("details-poster").src = details.poster_path
       ? `${IMAGE_BASE_URL}${details.poster_path}`
       : "https://via.placeholder.com/200x280?text=No+Poster";
-    document.getElementById("details-poster").alt = `${
-      details.title || details.name
-    } Poster`;
+    document.getElementById("details-poster").alt = `${details.title || details.name
+      } Poster`;
     document.getElementById("details-overview").textContent =
       details.overview || "No overview available.";
     document.getElementById("details-rating").textContent = details.vote_average
@@ -509,6 +515,7 @@ function playTrailer() {
     const iframe = document.getElementById("trailer-iframe");
     const modal = document.getElementById("trailer-modal");
     if (iframe && modal) {
+      // Correção da URL do YouTube
       iframe.src = `https://www.youtube.com/embed/${state.currentTrailerKey}?autoplay=1`;
       modal.showModal();
     } else {
@@ -821,7 +828,8 @@ async function setupFeaturedContent() {
             details.external_ids.imdb_id,
             mediaType,
             details.title || details.name,
-            posterUrl
+            posterUrl,
+            details
           );
         };
       } else if (discoverPlayButton) {
@@ -835,7 +843,6 @@ async function setupFeaturedContent() {
   }
 }
 
-// Função utilitária para preparar o stream Real-Debrid diretamente do frontend
 const REAL_DEBRID_TOKEN =
   "2RHUYGEFBFKUNIKQSUDID2NUIG4MDBOWRD2AFQL3Y6ZOVISI7OSQ";
 
@@ -848,6 +855,8 @@ document.addEventListener("DOMContentLoaded", () => {
   setupSearchBar();
   setupKeyboardNavigation();
   setupFeaturedContent();
+  setupSeriesModalEventListeners();
+
 
   fetchGenres();
   fetchMovies(
@@ -894,4 +903,113 @@ function filterByType(type) {
     .forEach((btn) => (btn.textContent = "Provider"));
 
   fetchMovies(`${type}/${state.currentFilter.sort}`, "movie-grid", type);
+}
+async function openSeriesModal(seriesData) {
+  const modal = document.getElementById("series-modal");
+  if (!modal) return;
+
+  document.getElementById("series-modal-title").textContent =
+    seriesData.name || seriesData.title;
+  const seasonsList = document.getElementById("seasons-list");
+  const episodesList = document.getElementById("episodes-list");
+
+  seasonsList.innerHTML =
+    '<div class="loading-spinner active"><i class="fas fa-spinner fa-spin"></i></div>';
+  episodesList.innerHTML = "<p>Please select a season first.</p>";
+  modal.showModal();
+
+  try {
+    const response = await fetch(
+      `${TMDB_BASE_URL}/tv/${seriesData.id}?api_key=${TMDB_API_KEY}&language=en-US`
+    );
+    if (!response.ok) throw new Error("Failed to fetch series details.");
+    const details = await response.json();
+
+    seasonsList.innerHTML = details.seasons
+      .filter((season) => season.season_number > 0)
+      .map(
+        (season) =>
+          `<button onclick="fetchEpisodes(${seriesData.id}, ${season.season_number}, '${seriesData.imdb_id}', this)">${season.name}</button>`
+      )
+      .join("");
+  } catch (error) {
+    console.error("Error fetching seasons:", error);
+    seasonsList.innerHTML =
+      '<p class="error-message">Could not load seasons.</p>';
+  }
+
+  if (window.innerWidth <= 768) {
+    modal.style.maxWidth = '95vw';
+    modal.style.width = '95vw';
+    modal.style.padding = '1rem';
+  }
+}
+
+async function fetchEpisodes(seriesId, seasonNumber, seriesImdbId, seasonButton) {
+  const episodesList = document.getElementById('episodes-list');
+  const seasonsContainer = document.querySelector('.seasons-container');
+  const episodesContainer = document.querySelector('.episodes-container');
+
+  episodesList.innerHTML = '<div class="loading-spinner active"><i class="fas fa-spinner fa-spin"></i></div>';
+  document.querySelectorAll('#seasons-list button').forEach(btn => btn.classList.remove('active'));
+  if (seasonButton) seasonButton.classList.add('active');
+
+  try {
+    if (!seriesImdbId) {
+      const externalIdsResponse = await fetch(`${TMDB_BASE_URL}/tv/${seriesId}/external_ids?api_key=${TMDB_API_KEY}`);
+      if (externalIdsResponse.ok) {
+        const externalIds = await externalIdsResponse.json();
+        seriesImdbId = externalIds.imdb_id || '';
+      }
+    }
+
+    const response = await fetch(`${TMDB_BASE_URL}/tv/${seriesId}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=en-US`);
+    if (!response.ok) throw new Error('Failed to fetch episodes.');
+    const seasonDetails = await response.json();
+
+    const poster = seasonDetails.poster_path
+      ? `${IMAGE_BASE_URL}${seasonDetails.poster_path}`
+      : 'https://dummyimage.com/500x750/cccccc/000000&text=No+Poster';
+
+    episodesList.innerHTML = seasonDetails.episodes.map((episode) => {
+      const title = `${episode.episode_number}. ${episode.name}`;
+      const fullTitle = `${seasonDetails.name} - ${title}`;
+      return `
+        <button class="episode-button"
+                data-imdb-id="${seriesImdbId}"
+                data-type="series"
+                data-title="${fullTitle.replace(/"/g, "'")}"
+                data-poster="${poster}"
+                data-season="${seasonNumber}"
+                data-episode="${episode.episode_number}">
+          <span>${title}</span>
+          <i class="fas fa-play play-icon"></i>
+        </button>`;
+    }).join('');
+
+    if (window.innerWidth <= 768) {
+      seasonsContainer.classList.add('hidden');
+      episodesContainer.classList.remove('hidden');
+    }
+  } catch (error) {
+    console.error('Error fetching episodes:', error);
+    episodesList.innerHTML = '<p class="error-message">Could not load episodes.</p>';
+  }
+}
+
+function setupSeriesModalEventListeners() {
+  const episodesList = document.getElementById("episodes-list");
+  if (episodesList) {
+    episodesList.addEventListener("click", (event) => {
+      const button = event.target.closest(".episode-button");
+      if (!button) return;
+
+      const { imdbId, type, title, poster, season, episode } = button.dataset;
+      playMovie(imdbId, type, title, poster, null, season, episode);
+    });
+  }
+}
+function showSeasonsList() {
+  document.querySelector(".seasons-container")?.classList.remove("hidden");
+  document.querySelector(".episodes-container")?.classList.add("hidden");
 }

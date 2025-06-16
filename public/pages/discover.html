@@ -35,7 +35,7 @@
         <div class="profile-dropdown">
           <a href="/profile">Profile</a>
           <a href="../pages/settings.html">Settings</a>
-          <a href="..//index.html">Log Out</a>
+          <a href="../index.html">Log Out</a>
         </div>
       </div>
     </div>
@@ -169,24 +169,6 @@
       </div>
     </div>
   </main>
-  <nav class="bottom-nav" aria-label="Mobile navigation">
-    <a href="home.html">
-      <i class="fas fa-home"></i>
-      <div>Home</div>
-    </a>
-    <a href="discover.html" class="active">
-      <i class="fas fa-search"></i>
-      <div>Discover</div>
-    </a>
-    <a href="watch_later.html">
-      <i class="fas fa-clock"></i>
-      <div>Watch Later</div>
-    </a>
-    <a href="settings.html">
-      <i class="fas fa-cog"></i>
-      <div>Settings</div>
-    </a>
-  </nav>
 
   <dialog id="filter-options-modal" class="modal" aria-label="Filter options">
     <div class="modal-content">
@@ -218,6 +200,27 @@
       <div id="modal-genre-dropdown"></div>
     </div>
   </dialog>
+
+  <dialog id="series-modal" class="details-modal" aria-label="Select Episode">
+  <h2 id="series-modal-title">Select Episode</h2>
+  <div class="series-selection-container">
+    <div class="seasons-container">
+      <h3>Seasons</h3>
+      <div id="seasons-list" class="scrollable-container"></div>
+    </div>
+    <div class="episodes-container hidden">
+      <button class="back-to-seasons" onclick="showSeasonsList()">
+        <i class="fas fa-arrow-left"></i> Back to Seasons
+      </button>
+      <h3>Episodes</h3>
+      <div id="episodes-list" class="scrollable-container">
+        <p>Please select a season first.</p>
+      </div>
+    </div>
+  </div>
+  <button onclick="document.getElementById('series-modal').close()">Close</button>
+</dialog>
+
 
       <dialog
         id="trailer-modal"

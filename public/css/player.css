@@ -11,12 +11,6 @@ body, html {
     overflow-y: auto !important;
 }
 
-.player-container {
-    width: 100%;
-    min-height: 100vh;
-    overflow-y: auto;
-}
-
 .plyr {
     position: absolute;
     top: 0;
@@ -26,17 +20,16 @@ body, html {
     background-color: #000;
 }
 
-#player-container {
-    min-height: 100vh;
-    width: 100vw;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding-bottom: 32px;
-    box-sizing: border-box;
-    overflow-y: auto;
+#player-container video {
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+  object-fit: contain;
+  background-color: #000;
+  border-radius: 8px;
 }
+
+
 
 #stream-list {
     max-height: 40vh;
@@ -60,4 +53,128 @@ body, html {
     white-space: normal;
     word-break: break-all;
 }
+/* Regras para o Plyr em modo fullscreen */
+:fullscreen .plyr,
+:-webkit-full-screen .plyr,
+:-moz-full-screen .plyr,
+:-ms-fullscreen .plyr {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vw !important; /* Ocupar 100% da largura da viewport */
+    height: 100vh !important; /* Ocupar 100% da altura da viewport */
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: #000 !important;
+    z-index: 9999;
+}
 
+/* Garante que o wrapper do vídeo, o poster e o próprio vídeo preencham a tela em fullscreen */
+:fullscreen .plyr .plyr__video-wrapper,
+:-webkit-full-screen .plyr .plyr__video-wrapper,
+:-moz-full-screen .plyr .plyr__video-wrapper,
+:-ms-fullscreen .plyr .plyr__video-wrapper,
+:fullscreen .plyr .plyr__poster, /* Adicionado para o poster */
+:-webkit-full-screen .plyr .plyr__poster,
+:-moz-full-screen .plyr .plyr__poster,
+:-ms-fullscreen .plyr .plyr__poster {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    object-fit: cover !important; /* Faz o vídeo/poster preencher a tela, cortando as bordas se necessário */
+    position: absolute !important; /* Assegura que o elemento pode se expandir */
+    top: 0 !important;
+    left: 0 !important;
+}
+
+/* Garante que o elemento de vídeo dentro do Plyr também siga as regras */
+:fullscreen .plyr video,
+:-webkit-full-screen .plyr video,
+:-moz-full-screen .plyr video,
+:-ms-fullscreen .plyr video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    max-width: none !important;
+    max-height: none !important;
+}
+
+/* Garante que o corpo e o HTML não tenham margens ou paddings em fullscreen */
+:fullscreen body,
+:fullscreen html {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+.plyr--fullscreen-active .plyr__poster,
+:-webkit-full-screen .plyr .plyr__poster,
+:-moz-full-screen .plyr .plyr__poster,
+:-ms-fullscreen .plyr .plyr__poster {
+    display: none !important;
+}
+/* Correção final e super agressiva para fullscreen */
+
+/* Força o player a preencher a tela */
+.plyr--fullscreen-active,
+.plyr--full-screen { /* Adicionando .plyr--full-screen para compatibilidade */
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: #000 !important;
+    z-index: 99999 !important; /* Aumenta o z-index para garantir que esteja acima de tudo */
+}
+
+/* Força o wrapper do vídeo e o poster a preencherem o player */
+.plyr--fullscreen-active .plyr__video-wrapper,
+.plyr--fullscreen-active .plyr__poster,
+.plyr--full-screen .plyr__video-wrapper, /* Adicionando para compatibilidade */
+.plyr--full-screen .plyr__poster {      /* Adicionando para compatibilidade */
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    object-fit: cover !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    transform: none !important; /* Desabilita possíveis transformações que podem afetar o layout */
+}
+
+/* Força o próprio elemento de vídeo a preencher o wrapper */
+.plyr--fullscreen-active video,
+.plyr--full-screen video { /* Adicionando para compatibilidade */
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    max-width: none !important;
+    max-height: none !important;
+    transform: none !important; /* Desabilita possíveis transformações */
+}
+
+/* Garante que o corpo e o HTML não tenham margens/paddings e overflow */
+:fullscreen body,
+:fullscreen html,
+:-webkit-full-screen body,
+:-webkit-full-screen html,
+:-moz-full-screen body,
+:-moz-full-screen html,
+:-ms-fullscreen body,
+:-ms-fullscreen html {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100vh !important;
+    width: 100vw !important;
+    overflow: hidden !important;
+}
+
+/* Remova qualquer regra de aspect-ratio ou padding-bottom se existir para o vídeo ou wrapper */
+.plyr__video-wrapper[style*="padding-bottom"],
+.plyr__video-wrapper[style*="aspect-ratio"] {
+    padding-bottom: 0 !important;
+    aspect-ratio: auto !important;
+}
