@@ -34,7 +34,6 @@ function setupProfileDropdown() {
   }
 }
 
-
 const TMDB_API_KEY = "f0609e6638ef2bc5b31313a712e7a8a4";
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
@@ -42,7 +41,6 @@ const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
 let watchLaterList = JSON.parse(localStorage.getItem("watchLater")) || [];
 let currentTrailerKey = "";
 
-// Chamada à API Torrentio com tratamento de erro adequado
 fetch("https://torrentio.strem.fun/stream/movie/tt7068946.json")
   .then((response) => {
     if (!response.ok) {
@@ -51,10 +49,8 @@ fetch("https://torrentio.strem.fun/stream/movie/tt7068946.json")
     return response.json();
   })
   .then((data) => {
-    if (data && data.streams) {  // Alterado para verificar data.streams em vez de data.success
+    if (data && data.streams) {
       console.log("Streaming options fetched successfully:", data.streams.length, "options available");
-      // Aqui você pode processar os dados de streaming recebidos
-      // Exemplo: data.streams contém a lista de opções de streaming
     } else {
       console.warn("Unexpected API response structure:", data);
     }
@@ -127,7 +123,7 @@ async function handleSearch(query) {
     if (!response.ok) throw new Error("Failed to fetch search results.");
 
     const data = await response.json();
-    const results = data.results.filter(
+    const filteredResults = data.results.filter(
       (item) => item.media_type !== "person" && item.poster_path
     );
 
@@ -163,7 +159,7 @@ async function handleSearch(query) {
       .map((item, index) => {
         const poster = `${IMAGE_BASE_URL}${item.poster_path}`;
         const titleText = item.title || item.name || "Untitled";
-        const itemJSON = JSON.stringify(item).replace(/'/g, "&#39;");
+        const itemJSON = JSON.stringify(item).replace(/'/g, "'");
         return `
                 <article class="movie-card" style="--i: ${index + 1};">
                     <img src="${poster}" alt="${titleText} Poster">
@@ -308,7 +304,7 @@ async function fetchMovies(endpoint, containerId, type) {
           ? `${IMAGE_BASE_URL}${item.poster_path}`
           : "https://via.placeholder.com/200x280?text=No+Poster";
         const titleText = item.title || item.name || "Untitled";
-        const itemJSON = JSON.stringify(item).replace(/'/g, "&#39;");
+        const itemJSON = JSON.stringify(item).replace(/'/g, "'");
         return `
             <div class="carousel-item" style="--i: ${index + 1};">
                 <img src="${poster}" alt="${titleText} Poster">
@@ -371,7 +367,6 @@ async function openSeriesModal(seriesData) {
     seasonsList.innerHTML =
       '<p class="error-message">Could not load seasons.</p>';
   }
-  // No final da função openSeriesModal, adicione:
 if (window.innerWidth <= 768) {
   modal.style.maxWidth = '95vw';
   modal.style.width = '95vw';
@@ -424,7 +419,7 @@ async function fetchEpisodes(seriesId, seasonNumber, seriesImdbId, seasonButton)
         <button class="episode-button" 
                 data-imdb-id="${seriesImdbId}" 
                 data-type="series" 
-                data-title="${fullTitle.replace(/"/g, '&quot;')}" 
+                data-title="${fullTitle.replace(/"/g, '"')}" 
                 data-poster="${poster}" 
                 data-season="${seasonNumber}" 
                 data-episode="${episode.episode_number}">
@@ -433,7 +428,6 @@ async function fetchEpisodes(seriesId, seasonNumber, seriesImdbId, seasonButton)
         </button>`;
     }).join('');
 
-    // Mostrar episódios e ocultar temporadas em mobile
     if (window.innerWidth <= 768) {
       seasonsContainer.classList.add('hidden');
       episodesContainer.classList.remove('hidden');
@@ -597,7 +591,6 @@ function showTutorial() {
       </div>
     `;
 
-    // Position the popup near the element it's describing
     const element = document.querySelector(tutorialSteps[step].element);
     if (element) {
       const rect = element.getBoundingClientRect();
@@ -606,7 +599,6 @@ function showTutorial() {
       tutorial.style.left = `${rect.left}px`;
     }
 
-    // Remove any existing tutorial popup
     const existingTutorial = document.querySelector('.tutorial-popup');
     if (existingTutorial) {
       existingTutorial.remove();
@@ -614,7 +606,6 @@ function showTutorial() {
 
     document.body.appendChild(tutorial);
 
-    // Add event listeners
     const prevBtn = tutorial.querySelector('.tutorial-prev');
     const nextBtn = tutorial.querySelector('.tutorial-next');
     const finishBtn = tutorial.querySelector('.tutorial-finish');
@@ -641,7 +632,6 @@ function showTutorial() {
     }
   }
 
-  // Start the tutorial with the first step
   showStep(0);
 }
 
@@ -700,7 +690,6 @@ document.addEventListener("DOMContentLoaded", () => {
       
       const data = await response.json();
       
-      // Handle the specific data structure from the API
       if (data && data.hasOwnProperty('streams') && Array.isArray(data.streams)) {
         return {
           success: true,

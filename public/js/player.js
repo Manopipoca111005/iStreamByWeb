@@ -1,4 +1,6 @@
 const API_BASE_URL = "https://api-lofru6ycsa-uc.a.run.app";
+//const API_BASE_URL = "http://127.0.0.1:5001/istreambyweb/us-central1/api";
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   const params = new URLSearchParams(window.location.search);
@@ -69,7 +71,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Priorizar streams com qualidade especificada
         if (a.quality && !b.quality) return -1;
         if (!a.quality && b.quality) return 1;
-        
+
         // Entre streams MP4, priorizar os que têm H.264 explicitamente mencionado
         const aHasH264 = a.title.toLowerCase().match(/h\.?264|avc/);
         const bHasH264 = b.title.toLowerCase().match(/h\.?264|avc/);
@@ -82,11 +84,36 @@ document.addEventListener("DOMContentLoaded", async () => {
       spinner.remove();
       playerContainer.innerHTML = `<div style='color:#fff;font-family:sans-serif;padding:16px;'><h2>Escolha uma fonte para assistir:</h2><div id='stream-list'></div></div>`;
       const streamList = document.getElementById('stream-list');
-      filteredStreams.forEach((stream, idx) => {        const btn = document.createElement('button');
+      const searchInput = document.createElement('input');
+      searchInput.type = 'text';
+      searchInput.placeholder = 'Pesquisar stream...';
+      searchInput.style = 'margin: 8px 0; padding: 8px; width: 100%; max-width: 400px; font-size: 1em; border-radius: 6px; border: 1px solid #555; background: #111; color: #fff;';
+      const containerDiv = playerContainer.querySelector('div'); // pega a div que contém o stream-list
+      containerDiv.insertBefore(searchInput, streamList);
+
+
+      // Função de filtro
+      searchInput.addEventListener('input', () => {
+        const filter = searchInput.value.toLowerCase();
+
+
+        const buttons = streamList.querySelectorAll('button');
+        buttons.forEach(btn => {
+          const txt = normalize(btn.textContent);
+
+          btn.style.display = txt.includes(filter) ? 'block' : 'none';
+        });
+      });
+      filteredStreams.forEach((stream, idx) => {
+        const btn = document.createElement('button');
         const quality = stream.quality ? ` [${stream.quality}]` : '';
-        const format = stream.title.toLowerCase().includes('h264') || stream.title.toLowerCase().includes('h.264') ? ' [H.264]' : 
-                      stream.title.toLowerCase().includes('avc') ? ' [AVC]' : ' [MP4]';
-        btn.textContent = `${stream.title || 'Stream'}${quality}${format}`;
+        const format = stream.title.toLowerCase().includes('h264') || stream.title.toLowerCase().includes('h.264') ? ' [H.264]' :
+          stream.title.toLowerCase().includes('avc') ? ' [AVC]' : ' [MP4]';
+        const isMP4 = stream.title.toLowerCase().includes('.mp4');
+        const isH264 = stream.title.toLowerCase().includes('h264') || stream.title.toLowerCase().includes('h.264') || stream.title.toLowerCase().includes('avc');
+        const mobileIcon = (isMP4 && isH264) ? ' 📱' : '';
+        btn.textContent = `${stream.title || 'Stream'}${quality}${format}${mobileIcon}`;
+
         btn.style = 'display:block;margin:8px 0;padding:10px 16px;font-size:1em;background:#222;color:#fff;border:none;border-radius:6px;cursor:pointer;text-align:left;word-break:break-word;';
         btn.onclick = async () => {
           playerContainer.innerHTML = '';
@@ -99,7 +126,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           if (cleanTitle) {
             magnet += `&dn=${encodeURIComponent(cleanTitle)}`;
           }
-          const apiUrl = `${API_BASE_URL.replace(/\/$/,"")}/stream?magnet=${encodeURIComponent(magnet)}`;
+          const apiUrl = `${API_BASE_URL.replace(/\/$/, "")}/stream?magnet=${encodeURIComponent(magnet)}`;
           try {
             const response = await fetch(apiUrl);
             if (!response.ok) throw new Error(`Erro ao buscar o stream: ${response.status} ${response.statusText}`);
