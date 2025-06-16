@@ -1,6 +1,6 @@
 // A API_BASE_URL deve apontar para o seu backend.
-//const API_BASE_URL = "https://api-lofru6ycsa-uc.a.run.app"; 
-const API_BASE_URL = "http://127.0.0.1:5001/istreambyweb/us-central1/api"; // Se estiver testando localmente, use esta.
+const API_BASE_URL = "https://api-lofru6ycsa-uc.a.run.app"; 
+//const API_BASE_URL = "http://127.0.0.1:5001/istreambyweb/us-central1/api"; // Se estiver testando localmente, use esta.
 
 // Remova a OPENSUBTITLES_API_KEY e OPENSUBTITLES_BASE_URL deste arquivo,
 // elas só devem estar no backend (`subtitles.js`).
@@ -617,84 +617,87 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
             playerContainer.appendChild(videoElement);
 
-            if (typeof Plyr !== "undefined") {
-              const player = new Plyr(videoElement, {
-                title: title,
-                autoplay: true,
-                muted: true,
-                settings: ["captions", "quality", "speed", "loop"],
-                controls: [
-                  "play-large",
-                  "restart",
-                  "rewind",
-                  "play",
-                  "fast-forward",
-                  "progress",
-                  "current-time",
-                  "duration",
-                  "mute",
-                  "volume",
-                  "captions",
-                  "settings",
-                  "pip",
-                  "airplay",
-                  "fullscreen",
-                ],
-              });
+if (typeof Plyr !== "undefined") {
+  if (window.selectedSubtitle) {
+    const { subtitle, language } = window.selectedSubtitle;
+    const label = `${getLanguageName(language)} - ${subtitle.release || 'Legenda'}`;
 
-              if (window.selectedSubtitle) {
-                const { subtitle, language } = window.selectedSubtitle;
-                const label = `${getLanguageName(language)} - ${subtitle.release || 'Legenda'}`;
+    try {
+      const downloadUrl = await getSubtitleDownloadUrl(subtitle.file_id);
+      if (downloadUrl) {
+        const proxyUrl = `${API_BASE_URL}/subtitles/proxy?url=${encodeURIComponent(downloadUrl)}`;
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error("Falha ao buscar legenda via proxy.");
 
-                player.on('ready', async () => {
-                  console.log("Player pronto, carregando legenda...");
-                  const success = await loadSubtitleIntoPlayer(player, subtitle.file_id, language, label);
-                  if (success) {
-                    console.log("Legenda carregada com sucesso");
-                    if (language === 'pt') {
-                      setTimeout(() => {
-                        player.captions.active = true;
-                      }, 1000);
-                    }
-                  }
-                });
-              }
+        const srtContent = await response.text();
+        const vttContent = convertSrtToVtt(srtContent);
+        const blob = new Blob([vttContent], { type: 'text/vtt' });
+        const blobUrl = URL.createObjectURL(blob);
 
-              player.on("error", (event) => {
-                console.error("Erro no leitor Plyr (evento Plyr):", event);
-                let errorMessage = "O leitor de vídeo encontrou um erro inesperado.";
-                if (event.detail && event.detail.data && event.detail.data.message) {
-                    errorMessage += ` Detalhes: ${event.detail.data.message}`;
-                } else if (event.detail && event.detail.message) {
-                    errorMessage += ` Detalhes: ${event.detail.message}`;
-                } else if (event.detail && event.detail.code) {
-                    errorMessage += ` Código: ${event.detail.code}`;
-                }
-                showError(errorMessage + ". Por favor, tente outra fonte.");
-              });
+        const track = document.createElement('track');
+        track.kind = 'subtitles';
+        track.label = label;
+        track.srclang = language;
+        track.src = blobUrl;
+        track.default = true;
 
-              player.on('enterfullscreen', () => {
-                  console.log('Entrou em fullscreen!');
-                  videoElement.style.setProperty('object-fit', 'cover', 'important');
-                  videoElement.style.setProperty('width', '100%', 'important');
-                  videoElement.style.setProperty('height', '100%', 'important');
-                  videoElement.style.setProperty('max-width', 'none', 'important');
-                  videoElement.style.setProperty('max-height', 'none', 'important');
+        videoElement.appendChild(track);
+        console.log("Legenda adicionada ao <video> antes do Plyr.");
+      }
+    } catch (error) {
+      console.error("Erro ao carregar legenda antes de iniciar o Plyr:", error);
+    }
+  }
 
-                  const posterElement = playerContainer.querySelector('.plyr__poster');
-                  if (posterElement) {
-                      posterElement.style.setProperty('object-fit', 'cover', 'important');
-                      posterElement.style.setProperty('width', '100%', 'important');
-                      posterElement.style.setProperty('height', '100%', 'important');
-                      posterElement.style.setProperty('max-width', 'none', 'important');
-                      posterElement.style.setProperty('max-height', 'none', 'important');
-                  }
-              });
+  const player = new Plyr(videoElement, {
+    title: title,
+    autoplay: true,
+    muted: true,
+    settings: ["captions", "quality", "speed", "loop"],
+    controls: [
+      "play-large",
+      "restart",
+      "rewind",
+      "play",
+      "fast-forward",
+      "progress",
+      "current-time",
+      "duration",
+      "mute",
+      "volume",
+      "captions",
+      "settings",
+      "pip",
+      "airplay",
+      "fullscreen",
+    ],
+  });
 
-              player.on('exitfullscreen', () => {
-                  console.log('Saiu do fullscreen!');
-              });
-            }
+  player.on("ready", () => {
+    console.log("Plyr iniciado com sucesso. Verifica se o botão CC está visível.");
+    if (player.captions) {
+      player.captions.active = true;
+    }
+  });
+
+  player.on("error", (event) => {
+    console.error("Erro no leitor Plyr:", event);
+  });
+
+  player.on("enterfullscreen", () => {
+    console.log("Entrou em fullscreen");
+    videoElement.style.setProperty("object-fit", "cover", "important");
+    videoElement.style.setProperty("width", "100%", "important");
+    videoElement.style.setProperty("height", "100%", "important");
+    videoElement.style.setProperty("max-width", "none", "important");
+    videoElement.style.setProperty("max-height", "none", "important");
+  });
+
+  player.on("exitfullscreen", () => {
+    console.log("Saiu do fullscreen");
+  });
+}
+
           } catch (error) {
             console.error("Erro ao preparar o stream (depois da seleção da fonte):", error);
             showError(error.message || "Erro ao preparar o vídeo. Por favor, tente outra fonte.");
