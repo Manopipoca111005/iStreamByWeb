@@ -717,7 +717,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             const videoElement = document.createElement("video");
             videoElement.id = "player";
+            if (!isSafari()) {
             videoElement.controls = true;
+            }
+            videoElement.playsInline = true;
             videoElement.autoplay = true;
             videoElement.muted = true;
             if (poster && !disablePoster) videoElement.poster = poster;
