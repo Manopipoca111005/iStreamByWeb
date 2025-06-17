@@ -1,6 +1,6 @@
 // A API_BASE_URL deve apontar para o seu backend.
-//const API_BASE_URL = "https://api-lofru6ycsa-uc.a.run.app";
-const API_BASE_URL = "http://127.0.0.1:5001/istreambyweb/us-central1/api"; // Se estiver testando localmente, use esta.
+const API_BASE_URL = "https://api-lofru6ycsa-uc.a.run.app";
+//const API_BASE_URL = "http://127.0.0.1:5001/istreambyweb/us-central1/api"; // Se estiver testando localmente, use esta.
 
 let VIDEO_EXTENSIONS = [".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm"];
 const userAgent = navigator.userAgent || window.opera;
