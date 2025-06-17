@@ -2,7 +2,8 @@
 const API_BASE_URL = "https://api-lofru6ycsa-uc.a.run.app";
 //const API_BASE_URL = "http://127.0.0.1:5001/istreambyweb/us-central1/api"; // Se estiver testando localmente, use esta.
 
-let VIDEO_EXTENSIONS = [".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm"];
+let videoExtensions = [".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm"];
+let incompatibleCodecs = ["h265", "hevc", "vp9", "av1"];
 const userAgent = navigator.userAgent || window.opera;
 // Função para buscar legendas disponíveis (chama seu backend)
 async function fetchSubtitles(imdbId, type, season, episode) {
@@ -197,6 +198,18 @@ function createSubtitlePicker(subtitles, onSubtitleSelect) {
     container.appendChild(noSubtitles);
     return container;
   }
+  subtitles.sort((a, b) => {
+    const langOrder = { "pt-pt": 0, "pt-br": 1, en: 2, es: 3 };
+    const aOrder =
+      langOrder[a.language.toLowerCase()] !== undefined
+        ? langOrder[a.language.toLowerCase()]
+        : 99;
+    const bOrder =
+      langOrder[b.language.toLowerCase()] !== undefined
+        ? langOrder[b.language.toLowerCase()]
+        : 99;
+    return aOrder - bOrder;
+  });
 
   const groupedSubtitles = subtitles.reduce((groups, subtitle) => {
     const lang = subtitle.language;
@@ -405,8 +418,10 @@ function createSubtitlePicker(subtitles, onSubtitleSelect) {
 
 // Função para obter emoji da bandeira do país
 function getLanguageFlag(code) {
+  code = code.toLowerCase();
   const flags = {
-    pt: "🇵🇹",
+    "pt-pt": "🇵🇹",
+    "pt-br": "🇧🇷",
     en: "🇺🇸",
     es: "🇪🇸",
     fr: "🇫🇷",
@@ -431,8 +446,10 @@ function getLanguageFlag(code) {
 
 // Função para obter nome do idioma
 function getLanguageName(code) {
+  code = code.toLowerCase();
   const languages = {
-    pt: "Português",
+    "pt-pt": "Português",
+    "pt-br": "Português (Brasil)",
     en: "English",
     es: "Español",
     fr: "Français",
@@ -455,9 +472,31 @@ function getLanguageName(code) {
   return languages[code] || code.toUpperCase();
 }
 
+// Retorna true se a string de codecs for compatível universalmente (apenas h264/avc)
+function isCodecCompatible(bingeGropString) {
+  if (!bingeGropString) return false;
+  const codecs = bingeGropString.toLowerCase().split("|");
+  // Aceita apenas se tiver h264 ou avc e NÃO tiver h265, hevc, vp9, av1
+  if (!userAgent.includes("Safari")) {
+    return true;
+  }
+  const hasIncompatible = codecs.some((c) => incompatibleCodecs.includes(c));
+  return !hasIncompatible;
+}
+function isFileExtensionCompatible(filename) {
+  if (!filename) return false;
+  const ext = filename.toLowerCase().split(".").pop();
+  console.log("Verificando extensão do arquivo:", ext, videoExtensions);
+  return videoExtensions.includes(`.${ext}`);
+}
+
+function isSafari() {
+  return userAgent.includes("Safari") && !userAgent.includes("Chrome");
+}
+
 async function fetchTorrentioStreams(imdbId, type, season, episode) {
-  if (userAgent.includes("Safari")) {
-    VIDEO_EXTENSIONS = [".mp4"];
+  if (isSafari()) {
+    videoExtensions = [".mp4"];
   }
   let torrentioUrl;
   if (type === "series" && season && episode) {
@@ -470,9 +509,14 @@ async function fetchTorrentioStreams(imdbId, type, season, episode) {
   const torrentioRes = await fetch(torrentioUrl);
   const torrentioData = await torrentioRes.json();
   torrentioData.streams = torrentioData.streams || [];
-  return torrentioData.streams.filter(
-    (s) => s.infoHash && s.behaviorHints.filename.includes(VIDEO_EXTENSIONS)
-  );
+  console.log("Streams do Torrentio recebidos:", torrentioData.streams);
+  return torrentioData.streams.filter((s) => {
+    return (
+      s.infoHash &&
+      isFileExtensionCompatible(s.behaviorHints?.filename) &&
+      isCodecCompatible(s.behaviorHints.bingeGroup)
+    );
+  });
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
