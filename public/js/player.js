@@ -1,10 +1,11 @@
-// A API_BASE_URL deve apontar para o seu backend.
 const API_BASE_URL = "https://api-lofru6ycsa-uc.a.run.app";
-//const API_BASE_URL = "http://127.0.0.1:5001/istreambyweb/us-central1/api"; // Se estiver testando localmente, use esta.
+// Se estiver testando localmente, use esta:
+// const API_BASE_URL = "http://127.0.0.1:5001/istreambyweb/us-central1/api"; 
 
 let videoExtensions = [".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm"];
 let incompatibleCodecs = ["h265", "hevc", "vp9", "av1"];
 const userAgent = navigator.userAgent || window.opera;
+
 // Função para buscar legendas disponíveis (chama seu backend)
 async function fetchSubtitles(imdbId, type, season, episode) {
   try {
@@ -36,91 +37,23 @@ async function fetchSubtitles(imdbId, type, season, episode) {
   }
 }
 
-// Função para obter URL de download da legenda (chama seu backend)
-async function getSubtitleDownloadUrl(fileId) {
-  try {
-    // Agora chama o endpoint de download no SEU backend
-    const response = await fetch(`${API_BASE_URL}/subtitles/download`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ file_id: parseInt(fileId) }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        `Erro ao obter URL de download do backend: ${
-          response.status
-        }. Detalhes: ${JSON.stringify(errorData)}`
-      );
-    }
-
-    const data = await response.json();
-    // O seu backend deve retornar 'download_url' ou similar, não 'link'
-    return data.download_url || null;
-  } catch (error) {
-    console.error(
-      "Erro ao obter URL de download da legenda via backend:",
-      error
-    );
-    return null;
-  }
-}
-
-// Função para converter legenda para formato WebVTT
-function convertSrtToVtt(srtContent) {
-  let vttContent = "WEBVTT\n\n";
-  vttContent += srtContent.replace(
-    /(\d{2}):(\d{2}):(\d{2}),(\d{3})/g,
-    "$1:$2:$3.$4"
-  );
-  return vttContent;
-}
-
 // Função para carregar legenda no player
 async function loadSubtitleIntoPlayer(player, fileId, language, label) {
   try {
-    console.log(`Carregando legenda: ${label} (file_id: ${fileId})`);
-
-    // Obter URL de download (esta URL virá do seu backend, que por sua vez obteve da OpenSubtitles)
-    const downloadUrl = await getSubtitleDownloadUrl(fileId);
-    if (!downloadUrl) {
-      throw new Error("Não foi possível obter URL de download da legenda.");
+    if (!fileId || !language || !label) {
+      console.warn("Parâmetros insuficientes para carregar legenda.");
+      return false;
     }
+    const loadSubtitleUrl = `${API_BASE_URL}/subtitles/vtt?fileId=${fileId}`;
 
-    // Fazer proxy do download através do nosso backend
-    // Este proxy é necessário porque a URL de download da legenda (do OpenSubtitles)
-    // pode ter problemas de CORS se acessada diretamente do frontend.
-    // O seu backend atuará como um intermediário.
-    const proxyUrl = `${API_BASE_URL}/subtitles/proxy?url=${encodeURIComponent(
-      downloadUrl
-    )}`;
-
-    // Buscar conteúdo da legenda através do seu endpoint de proxy
-    const response = await fetch(proxyUrl);
-    if (!response.ok) {
-      throw new Error(`Erro ao baixar legenda via proxy: ${response.status}`);
-    }
-
-    const srtContent = await response.text();
-    const vttContent = convertSrtToVtt(srtContent);
-
-    // Criar blob URL para a legenda
-    const blob = new Blob([vttContent], { type: "text/vtt" });
-    const blobUrl = URL.createObjectURL(blob);
-
-    // Adicionar track de legenda ao vídeo
-    const videoElement = player.media;
     const track = document.createElement("track");
     track.kind = "subtitles";
     track.label = label;
     track.srclang = language;
-    track.src = blobUrl;
-    track.default = language === "pt"; // Português como padrão
+    track.src = loadSubtitleUrl;
+    track.default = true;
 
-    videoElement.appendChild(track);
+    player.appendChild(track);
 
     console.log(`Legenda carregada: ${label}`);
     return true;
@@ -426,7 +359,7 @@ function getLanguageFlag(code) {
     es: "🇪🇸",
     fr: "🇫🇷",
     de: "🇩🇪",
-    it: "🇮🇹",
+    it: "🇮�",
     ru: "🇷🇺",
     ja: "🇯🇵",
     ko: "🇰🇷",
@@ -486,7 +419,6 @@ function isCodecCompatible(bingeGropString) {
 function isFileExtensionCompatible(filename) {
   if (!filename) return false;
   const ext = filename.toLowerCase().split(".").pop();
-  console.log("Verificando extensão do arquivo:", ext, videoExtensions);
   return videoExtensions.includes(`.${ext}`);
 }
 
@@ -509,7 +441,6 @@ async function fetchTorrentioStreams(imdbId, type, season, episode) {
   const torrentioRes = await fetch(torrentioUrl);
   const torrentioData = await torrentioRes.json();
   torrentioData.streams = torrentioData.streams || [];
-  console.log("Streams do Torrentio recebidos:", torrentioData.streams);
   return torrentioData.streams.filter((s) => {
     return (
       s.infoHash &&
@@ -546,7 +477,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const spinner = document.createElement("div");
       spinner.id = "player-loading-spinner";
       spinner.innerHTML =
-        '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px 0"><div class="loading-spinner" style="margin-bottom:16px;"><i class="fas fa-spinner fa-spin fa-3x"></i></div><div style="color:#fff;font-size:1.2em;">Preparando o vídeo, pode demorar até 1 minuto...</div></div>';
+        '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px 0"><div class="loading-spinner" style="margin-bottom:16px;"><i class="fas fa-spinner fa-spin fa-3x"></i></div><div style="color:#fff;font-size:1.2em;">Preparando o vídeo...</div></div>';
       playerContainer.appendChild(spinner);
 
       let streams = await fetchTorrentioStreams(imdbId, type, season, episode);
@@ -706,10 +637,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (!streamData.success || !streamData.url) {
               throw new Error(
                 streamData.message ||
-                  "Erro ao obter o URL do stream. Sucesso: " +
-                    streamData.success +
-                    " URL: " +
-                    streamData.url
+                "Erro ao obter o URL do stream. Sucesso: " +
+                streamData.success +
+                " URL: " +
+                streamData.url
               );
             }
 
@@ -717,11 +648,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             const videoElement = document.createElement("video");
             videoElement.id = "player";
+            videoElement.crossOrigin = "anonymous"; // MANTER ESTA LINHA para que as legendas funcionem
             videoElement.controls = true;
             videoElement.autoplay = true;
             videoElement.muted = true;
-            if (poster && !disablePoster) videoElement.poster = poster;
-            videoElement.src = streamData.url;
+            
+            // VOLTAR A USAR O URL DIRETO DO REAL-DEBRID PARA O VÍDEO
+            videoElement.src = streamData.url; 
+
+            // MANTER O PROXY PARA O POSTER
+            if (poster && !disablePoster) {
+                videoElement.poster = `${API_BASE_URL}/proxy/image?url=${encodeURIComponent(poster)}`;
+            }
+
             videoElement.addEventListener("loadeddata", () => {
               loading.remove();
               console.log(
@@ -760,7 +699,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               );
             });
             playerContainer.appendChild(videoElement);
-
+            console.log(videoElement.crossOrigin)
             if (typeof Plyr !== "undefined") {
               if (window.selectedSubtitle) {
                 const { subtitle, language } = window.selectedSubtitle;
@@ -769,32 +708,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                 }`;
 
                 try {
-                  const downloadUrl = await getSubtitleDownloadUrl(
-                    subtitle.file_id
-                  );
-                  if (downloadUrl) {
-                    const proxyUrl = `${API_BASE_URL}/subtitles/proxy?url=${encodeURIComponent(
-                      downloadUrl
-                    )}`;
-                    const response = await fetch(proxyUrl);
-                    if (!response.ok)
-                      throw new Error("Falha ao buscar legenda via proxy.");
-
-                    const srtContent = await response.text();
-                    const vttContent = convertSrtToVtt(srtContent);
-                    const blob = new Blob([vttContent], { type: "text/vtt" });
-                    const blobUrl = URL.createObjectURL(blob);
-
-                    const track = document.createElement("track");
-                    track.kind = "subtitles";
-                    track.label = label;
-                    track.srclang = language;
-                    track.src = blobUrl;
-                    track.default = true;
-
-                    videoElement.appendChild(track);
-                    console.log("Legenda adicionada ao <video> antes do Plyr.");
-                  }
+                  loadSubtitleIntoPlayer(
+                    videoElement,
+                    subtitle.file_id,
+                    language,
+                    label
+                  )
                 } catch (error) {
                   console.error(
                     "Erro ao carregar legenda antes de iniciar o Plyr:",

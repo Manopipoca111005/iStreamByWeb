@@ -1,21 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>iStream</title>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>iStream</title>
 
-		<link rel="stylesheet" href="../css/player.css" />
-		<link
-			rel="stylesheet"
-			href="https://cdn.plyr.io/3.7.8/plyr.css"
-		/>
-	</head>
-	<body>
-		<div id="player-container" playsinline>
-			</div>
+        <link rel="stylesheet" href="../css/player.css" />
+        <link
+            rel="stylesheet"
+            href="https://cdn.plyr.io/3.7.8/plyr.css"
+        />
+    </head>
+    <body >
+        <div id="player-container">
+            <video  id="videoPlayer" playsinline controls style="display: none;" ></video>
+            </div>
 
-		<script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
-		<script src="../js/player.js"></script>
-	</body>
+        <div id="loading-indicator" style="display: none; text-align: center; color: white; margin-top: 20px;">
+            Carregando...
+        </div>
+
+        <div id="stream-list" style="margin-top: 20px; text-align: center;">
+            </div>
+
+        <div id="subtitle-list" style="margin-top: 20px; text-align: center;">
+            </div>
+
+        <div id="error-message" style="display: none; color: red; text-align: center; margin-top: 20px;"></div>
+
+        <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+        <script src="../js/player.js"></script>
+    </body>
 </html>
