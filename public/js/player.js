@@ -1,6 +1,6 @@
 // A API_BASE_URL deve apontar para o seu backend.
-const API_BASE_URL = "https://api-lofru6ycsa-uc.a.run.app";
-//const API_BASE_URL = "http://127.0.0.1:5001/istreambyweb/us-central1/api"; // Se estiver testando localmente, use esta.
+//const API_BASE_URL = "https://api-lofru6ycsa-uc.a.run.app"; online//
+const API_BASE_URL = "http://127.0.0.1:5001/istreambyweb/us-central1/api";
 
 let videoExtensions = [".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm"];
 let incompatibleCodecs = ["h265", "hevc", "vp9", "av1"];
@@ -519,6 +519,54 @@ async function fetchTorrentioStreams(imdbId, type, season, episode) {
   });
 }
 
+// === INÍCIO: Firebase e Firestore para Continue Watching ===
+let firebaseApp, firebaseAuth, firestore, currentUser;
+let doc, setDoc, collection, getDocs, getAuth, onAuthStateChanged;
+async function initFirebaseAndAuth() {
+  if (!firebaseApp) {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+    const authModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+    const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+    getAuth = authModule.getAuth;
+    onAuthStateChanged = authModule.onAuthStateChanged;
+    doc = firestoreModule.doc;
+    setDoc = firestoreModule.setDoc;
+    collection = firestoreModule.collection;
+    getDocs = firestoreModule.getDocs;
+    const firebaseConfig = {
+      apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
+      authDomain: "istreambyweb.firebaseapp.com",
+      projectId: "istreambyweb",
+      storageBucket: "istreambyweb.firebasestorage.app",
+      messagingSenderId: "458543632560",
+      appId: "1:458543632560:web:1de42763df2d1515316b75",
+      measurementId: "G-JWNQKK2ZKW"
+    };
+    firebaseApp = initializeApp(firebaseConfig);
+    firebaseAuth = getAuth(firebaseApp);
+    firestore = firestoreModule.getFirestore(firebaseApp);
+    await new Promise((resolve) => {
+      onAuthStateChanged(firebaseAuth, (user) => {
+        currentUser = user;
+        resolve();
+      });
+    });
+  }
+}
+async function saveContinueWatching({ id, type, progress, runtime }) {
+  await initFirebaseAndAuth();
+  if (!currentUser) return;
+  const docRef = doc(firestore, "continueWatching", currentUser.uid, "items", `${id}_${type}`);
+  await setDoc(docRef, {
+    id,
+    type,
+    progress,
+    runtime,
+    lastWatched: Date.now()
+  });
+}
+// === FIM: Firebase e Firestore para Continue Watching ===
+
 document.addEventListener("DOMContentLoaded", async () => {
   const disablePoster = false;
   const params = new URLSearchParams(window.location.search);
@@ -725,6 +773,23 @@ document.addEventListener("DOMContentLoaded", async () => {
             videoElement.muted = true;
             if (poster && !disablePoster) videoElement.poster = poster;
             videoElement.src = streamData.url;
+            // Pega o parâmetro start da URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const start = parseInt(urlParams.get('start') || '0', 10);
+            let startTimeSet = false;
+            function setStartTimeIfNeeded() {
+              if (!startTimeSet && start > 0 && start < videoElement.duration) {
+                // Só seta se a diferença for maior que 2 segundos (evita loop se já estiver próximo)
+                if (Math.abs(videoElement.currentTime - start) > 2) {
+                  console.log("Setando currentTime para", start);
+                  videoElement.currentTime = start;
+                }
+                startTimeSet = true;
+              }
+            }
+            videoElement.addEventListener("loadedmetadata", setStartTimeIfNeeded);
+            videoElement.addEventListener("canplay", setStartTimeIfNeeded);
+            videoElement.addEventListener("playing", setStartTimeIfNeeded);
             videoElement.addEventListener("loadeddata", () => {
               loading.remove();
               console.log(
@@ -763,6 +828,36 @@ document.addEventListener("DOMContentLoaded", async () => {
               );
             });
             playerContainer.appendChild(videoElement);
+
+            // Adicionar listeners para salvar progresso
+            videoElement.addEventListener("timeupdate", () => {
+              if (videoElement.duration > 0 && !videoElement.paused && !videoElement.ended) {
+                saveContinueWatching({
+                  id: imdbId,
+                  type: type,
+                  progress: Math.floor(videoElement.currentTime),
+                  runtime: Math.floor(videoElement.duration)
+                });
+              }
+            });
+            videoElement.addEventListener("pause", () => {
+              saveContinueWatching({
+                id: imdbId,
+                type: type,
+                progress: Math.floor(videoElement.currentTime),
+                runtime: Math.floor(videoElement.duration)
+              });
+            });
+            window.addEventListener("beforeunload", () => {
+              if (!videoElement.ended) {
+                saveContinueWatching({
+                  id: imdbId,
+                  type: type,
+                  progress: Math.floor(videoElement.currentTime),
+                  runtime: Math.floor(videoElement.duration)
+                });
+              }
+            });
 
             if (typeof Plyr !== "undefined") {
               if (window.selectedSubtitle) {

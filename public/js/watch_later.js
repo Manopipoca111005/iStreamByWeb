@@ -906,39 +906,123 @@ window.closeTutorial = function () {
   else if (m) m.style.display = "none";
 };
 
-document.addEventListener("DOMContentLoaded", () => {
+// === INÍCIO: Firebase e Firestore ===
+let firebaseApp, firebaseAuth, firestore, currentUser;
+let doc, setDoc, deleteDoc, collection, getDocs;
+
+async function initFirebaseAndAuth() {
+  if (!firebaseApp) {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+    const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+    const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+    const { getFirestore } = firestoreModule;
+    // Atribuir funções Firestore às variáveis globais
+    doc = firestoreModule.doc;
+    setDoc = firestoreModule.setDoc;
+    deleteDoc = firestoreModule.deleteDoc;
+    collection = firestoreModule.collection;
+    getDocs = firestoreModule.getDocs;
+    const firebaseConfig = {
+      apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
+      authDomain: "istreambyweb.firebaseapp.com",
+      projectId: "istreambyweb",
+      storageBucket: "istreambyweb.firebasestorage.app",
+      messagingSenderId: "458543632560",
+      appId: "1:458543632560:web:1de42763df2d1515316b75",
+      measurementId: "G-JWNQKK2ZKW"
+    };
+    firebaseApp = initializeApp(firebaseConfig);
+    firebaseAuth = getAuth(firebaseApp);
+    firestore = getFirestore(firebaseApp);
+    // Espera autenticação
+    await new Promise((resolve) => {
+      onAuthStateChanged(firebaseAuth, (user) => {
+        currentUser = user;
+        resolve();
+      });
+    });
+  }
+}
+// === FIM: Firebase e Firestore ===
+
+document.addEventListener("DOMContentLoaded", async () => {
   // Apply theme immediately before loading content
   const savedTheme = localStorage.getItem("theme");
   if (savedTheme === "dark") {
     document.body.classList.add("dark-theme");
   }
 
-  // Retrieve and parse watch later items with error handling
-  try {
-    const savedItems = localStorage.getItem("watchLater");
-    console.log("Saved items from localStorage:", savedItems); // Debug log
-    
-    if (savedItems) {
-      watchLaterItemsGlobal = JSON.parse(savedItems);
-      if (!Array.isArray(watchLaterItemsGlobal)) {
-        console.error("Saved items is not an array");
-        watchLaterItemsGlobal = [];
-      }
-    } else {
-      console.log("No saved items found");
+  // Initialize Firebase and Auth
+  await initFirebaseAndAuth();
+
+  // Substituir carregamento do localStorage por Firestore
+  async function loadWatchLaterFromFirestore() {
+    await initFirebaseAndAuth();
+    if (!currentUser) {
+      showNotification("Você precisa estar logado para acessar sua lista!", "error");
       watchLaterItemsGlobal = [];
+      filteredItemsGlobal = [];
+      applyFiltersAndSort();
+      return;
     }
-    
+    const itemsCol = collection(firestore, "watchLater", currentUser.uid, "items");
+    const snapshot = await getDocs(itemsCol);
+    const firestoreItems = snapshot.docs.map(doc => doc.data());
+
+    // Buscar detalhes do TMDB para cada item
+    watchLaterItemsGlobal = await Promise.all(
+      firestoreItems.map(async (item) => {
+        const details = await fetchTmdbDetails(item.id, item.type);
+        // Se falhar, retorna pelo menos o id e type
+        return details ? { ...details, id: item.id, type: item.type } : item;
+      })
+    );
     filteredItemsGlobal = [...watchLaterItemsGlobal];
-    console.log("Loaded items:", watchLaterItemsGlobal); // Debug log
-  } catch (error) {
-    console.error("Error loading watch later items:", error);
-    watchLaterItemsGlobal = [];
-    filteredItemsGlobal = [];
+    applyFiltersAndSort();
+  }
+
+  // Substituir funções de adicionar/remover para usar Firestore
+  async function addToWatchLaterFirestore(item) {
+    await initFirebaseAndAuth();
+    if (!currentUser) return;
+    const docRef = doc(firestore, "watchLater", currentUser.uid, "items", `${item.id}_${item.type}`);
+    await setDoc(docRef, { id: item.id, type: item.type });
+    await loadWatchLaterFromFirestore();
+    showNotification("Adicionado à lista!", "success");
+  }
+
+  async function removeFromWatchLaterFirestore(item) {
+    await initFirebaseAndAuth();
+    if (!currentUser) return;
+    const docRef = doc(firestore, "watchLater", currentUser.uid, "items", `${item.id}_${item.type}`);
+    await deleteDoc(docRef);
+    await loadWatchLaterFromFirestore();
+    showNotification("Removido da lista!", "success");
+  }
+
+  // Substituir função de remoção
+  async function removeItemFromStorageAndRefresh(itemId, itemType) {
+    if (isProcessing) {
+      return;
+    }
+    try {
+      isProcessing = true;
+      showLoading();
+      closeDetailsModal();
+      const item = { id: itemId, type: itemType };
+      await removeFromWatchLaterFirestore(item);
+    } catch (error) {
+      console.error("Erro ao remover item:", error);
+      showNotification("Erro ao remover item.", "error");
+    } finally {
+      hideLoading();
+      isProcessing = false;
+      isModalOpen = false;
+    }
   }
 
   // Display items immediately after loading
-  applyFiltersAndSort();
+  await loadWatchLaterFromFirestore();
 
   // Initialize theme toggle button
   const themeToggleButton = document.querySelector(".theme-toggle");

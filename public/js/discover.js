@@ -533,41 +533,82 @@ function closeTrailerModal() {
   if (modal && typeof modal.close === "function") modal.close();
 }
 
-function toggleWatchLater(item, type, buttonElement = null) {
-  const index = state.watchLater.findIndex(
-    (w) => w.id === item.id && w.type === type
-  );
-  const watchLaterItem = {
-    id: item.id,
-    title: item.title || item.name,
-    poster_path: item.poster_path,
-    type: type,
-    rating: item.vote_average,
-    overview: item.overview,
-    release_date: item.release_date || item.first_air_date,
-    addedDate: new Date().toISOString(),
-  };
+// === INÍCIO: Firebase e Firestore ===
+let firebaseApp, firebaseAuth, firestore, currentUser;
+let doc, setDoc, deleteDoc, collection, getDocs;
 
-  if (index === -1) {
-    state.watchLater.push(watchLaterItem);
-    showNotification(
-      `${item.title || item.name} added to Watch Later!`,
-      "success"
-    );
-    if (buttonElement) {
-      buttonElement.textContent = "Remove from Watch Later";
-    }
-  } else {
-    state.watchLater.splice(index, 1);
-    showNotification(
-      `${item.title || item.name} removed from Watch Later.`,
-      "info"
-    );
-    if (buttonElement) {
-      buttonElement.textContent = "Add to Watch Later";
-    }
+async function initFirebaseAndAuth() {
+  if (!firebaseApp) {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+    const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+    const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+    const { getFirestore } = firestoreModule;
+    // Atribuir funções Firestore às variáveis globais
+    doc = firestoreModule.doc;
+    setDoc = firestoreModule.setDoc;
+    deleteDoc = firestoreModule.deleteDoc;
+    collection = firestoreModule.collection;
+    getDocs = firestoreModule.getDocs;
+    const firebaseConfig = {
+      apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
+      authDomain: "istreambyweb.firebaseapp.com",
+      projectId: "istreambyweb",
+      storageBucket: "istreambyweb.firebasestorage.app",
+      messagingSenderId: "458543632560",
+      appId: "1:458543632560:web:1de42763df2d1515316b75",
+      measurementId: "G-JWNQKK2ZKW"
+    };
+    firebaseApp = initializeApp(firebaseConfig);
+    firebaseAuth = getAuth(firebaseApp);
+    firestore = getFirestore(firebaseApp);
+    await new Promise((resolve) => {
+      onAuthStateChanged(firebaseAuth, (user) => {
+        currentUser = user;
+        resolve();
+      });
+    });
   }
-  localStorage.setItem("watchLater", JSON.stringify(state.watchLater));
+}
+// === FIM: Firebase e Firestore ===
+
+// Substituir funções de adicionar/remover para usar Firestore
+async function addToWatchLaterFirestore(item, type) {
+  await initFirebaseAndAuth();
+  if (!currentUser) return;
+  const docRef = doc(firestore, "watchLater", currentUser.uid, "items", `${item.id}_${type}`);
+  await setDoc(docRef, { id: item.id, type });
+  await loadWatchLaterFromFirestore();
+  showNotification("Adicionado à lista!", "success");
+}
+async function removeFromWatchLaterFirestore(item, type) {
+  await initFirebaseAndAuth();
+  if (!currentUser) return;
+  const docRef = doc(firestore, "watchLater", currentUser.uid, "items", `${item.id}_${type}`);
+  await deleteDoc(docRef);
+  await loadWatchLaterFromFirestore();
+  showNotification("Removido da lista!", "success");
+}
+async function loadWatchLaterFromFirestore() {
+  await initFirebaseAndAuth();
+  if (!currentUser) {
+    state.watchLater = [];
+    return;
+  }
+  const itemsCol = collection(firestore, "watchLater", currentUser.uid, "items");
+  const snapshot = await getDocs(itemsCol);
+  state.watchLater = snapshot.docs.map(doc => doc.data());
+}
+// Adaptar toggleWatchLater
+async function toggleWatchLater(item, type, buttonElement = null) {
+  await initFirebaseAndAuth();
+  const index = state.watchLater.findIndex((w) => w.id === item.id && w.type === type);
+  if (index === -1) {
+    await addToWatchLaterFirestore(item, type);
+    if (buttonElement) buttonElement.textContent = "Remove from Watch Later";
+  } else {
+    await removeFromWatchLaterFirestore(item, type);
+    if (buttonElement) buttonElement.textContent = "Add to Watch Later";
+  }
 }
 
 function setupThemeToggle() {

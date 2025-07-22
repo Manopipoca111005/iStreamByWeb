@@ -603,28 +603,202 @@ async function showDetails(itemData, type) {
   }
 }
 
-function addToWatchLater(itemData, type) {
-  const itemType =
-    itemData.media_type || type || (itemData.title ? "movie" : "tv");
+// === INÍCIO: Firebase e Firestore ===
+let firebaseApp, firebaseAuth, firestore, currentUser;
+let doc, setDoc, deleteDoc, collection, getDocs;
+
+async function initFirebaseAndAuth() {
+  if (!firebaseApp) {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+    const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+    const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+    const { getFirestore } = firestoreModule;
+    // Atribuir funções Firestore às variáveis globais
+    doc = firestoreModule.doc;
+    setDoc = firestoreModule.setDoc;
+    deleteDoc = firestoreModule.deleteDoc;
+    collection = firestoreModule.collection;
+    getDocs = firestoreModule.getDocs;
+    const firebaseConfig = {
+      apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
+      authDomain: "istreambyweb.firebaseapp.com",
+      projectId: "istreambyweb",
+      storageBucket: "istreambyweb.firebasestorage.app",
+      messagingSenderId: "458543632560",
+      appId: "1:458543632560:web:1de42763df2d1515316b75",
+      measurementId: "G-JWNQKK2ZKW"
+    };
+    firebaseApp = initializeApp(firebaseConfig);
+    firebaseAuth = getAuth(firebaseApp);
+    firestore = getFirestore(firebaseApp);
+    await new Promise((resolve) => {
+      onAuthStateChanged(firebaseAuth, (user) => {
+        currentUser = user;
+        resolve();
+      });
+    });
+  }
+}
+// === FIM: Firebase e Firestore ===
+
+// Substituir funções de adicionar/remover para usar Firestore
+async function addToWatchLaterFirestore(item, type) {
+  await initFirebaseAndAuth();
+  if (!currentUser) return;
+  const docRef = doc(firestore, "watchLater", currentUser.uid, "items", `${item.id}_${type}`);
+  await setDoc(docRef, { id: item.id, type });
+  await loadWatchLaterFromFirestore();
+  showNotification("Adicionado à lista!", "success");
+}
+async function loadWatchLaterFromFirestore() {
+  await initFirebaseAndAuth();
+  if (!currentUser) {
+    watchLaterList = [];
+    return;
+  }
+  const itemsCol = collection(firestore, "watchLater", currentUser.uid, "items");
+  const snapshot = await getDocs(itemsCol);
+  watchLaterList = snapshot.docs.map(doc => doc.data());
+}
+// Adaptar addToWatchLater
+async function addToWatchLater(itemData, type) {
+  await initFirebaseAndAuth();
+  const itemType = itemData.media_type || type || (itemData.title ? "movie" : "tv");
   const title = itemData.title || itemData.name || "Untitled";
   if (!watchLaterList.some((item) => item.id === itemData.id)) {
-    watchLaterList.push({
-      id: itemData.id,
-      title: title,
-      imdb_id: itemData.imdb_id || null,
-      poster_path: itemData.poster_path,
-      type: itemType,
-      rating: itemData.vote_average,
-      overview: itemData.overview,
-      release_date: itemData.release_date || itemData.first_air_date,
-      addedDate: new Date().toISOString(),
-    });
-    localStorage.setItem("watchLater", JSON.stringify(watchLaterList));
-    showNotification(`${title} added to Watch Later!`, "success");
+    await addToWatchLaterFirestore(itemData, itemType);
   } else {
     showNotification(`${title} is already in Watch Later.`, "info");
   }
 }
+
+// === INÍCIO: Continue Watching ===
+async function fetchContinueWatchingFromFirestore() {
+  await initFirebaseAndAuth();
+  if (!currentUser) return [];
+  const itemsCol = collection(firestore, "continueWatching", currentUser.uid, "items");
+  const snapshot = await getDocs(itemsCol);
+  // Filtrar para não mostrar itens já concluídos (progresso < 95% do filme/série)
+  return snapshot.docs.map(doc => doc.data()).filter(item => item.progress && item.progress < (item.duration ? item.duration * 0.95 : 100000));
+}
+
+async function fetchTmdbDetails(itemId, itemType) {
+  try {
+    const lang = "pt-BR";
+    const response = await fetch(
+      `${TMDB_BASE_URL}/${itemType}/${itemId}?api_key=${TMDB_API_KEY}&language=${lang}`
+    );
+    if (!response.ok) throw new Error("Erro ao buscar detalhes do TMDB");
+    return await response.json();
+  } catch (error) {
+    console.error("Erro ao buscar detalhes TMDB:", error);
+    return null;
+  }
+}
+
+async function renderContinueWatchingSection() {
+  const grid = document.getElementById("continue-watching");
+  const spinner = document.getElementById("continue-watching-spinner");
+  if (!grid || !spinner) return;
+  // Garantir que o grid tenha apenas a classe correta para estilização
+  grid.className = "carousel";
+  // Mostrar spinner enquanto carrega
+  spinner.style.display = "block";
+  // Limpar grid
+  grid.innerHTML = "";
+
+  const items = await fetchContinueWatchingFromFirestore();
+  if (!items.length) {
+    spinner.style.display = "none";
+    return;
+  }
+
+  // Buscar detalhes do TMDB para cada item
+  const itemsWithDetails = await Promise.all(
+    items.map(async (item) => {
+      const details = await fetchTmdbDetails(item.id, item.type);
+      return details ? { ...details, ...item } : null;
+    })
+  );
+  const validItems = itemsWithDetails.filter(Boolean);
+  if (!validItems.length) {
+    spinner.style.display = "none";
+    return;
+  }
+
+  grid.innerHTML = validItems.map((item, index) => {
+    const poster = item.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : "https://via.placeholder.com/200x300?text=S/Poster";
+    const title = item.title || item.name || "Título Desconhecido";
+    const percent = item.runtime ? Math.min(100, Math.round((item.progress / item.runtime) * 100)) : 0;
+    const itemJSON = escapeHtml(JSON.stringify(item));
+    return `
+      <div class="carousel-item" style="--i: ${index + 1};">
+        <img src="${poster}" alt="${title} Poster">
+        <div class="carousel-item-overlay">
+          <button class="play-btn" data-item='${itemJSON}'>Play</button>
+          <button class="details-btn" data-item='${itemJSON}'>View Details</button>
+          <button class="watch-later-btn" data-item='${itemJSON}'>Add to Watch Later</button>
+        </div>
+        <div class="carousel-item-content">
+          <h3>${title}</h3>
+          <p>Progresso: ${percent}%</p>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // Adicionar listeners aos botões
+  grid.querySelectorAll(".play-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const itemDataString = btn.dataset.item;
+      if (!itemDataString) return;
+      try {
+        const itemData = JSON.parse(itemDataString);
+        const id = itemData.id;
+        const type = itemData.type;
+        const title = itemData.title || itemData.name || "Título Desconhecido";
+        const poster = itemData.poster_path ? `${IMAGE_BASE_URL}${itemData.poster_path}` : "https://via.placeholder.com/200x300?text=S/Poster";
+        const progress = parseInt(itemData.progress || "0");
+        let playerUrl = `player.html?imdbId=${id}&type=${type}&title=${encodeURIComponent(title)}&poster=${encodeURIComponent(poster)}`;
+        if (progress > 0) playerUrl += `&start=${progress}`;
+        window.open(playerUrl, "_blank");
+      } catch (err) {
+        console.error("Failed to parse item data for Play", err);
+      }
+    });
+  });
+  grid.querySelectorAll(".details-btn").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      const itemDataString = btn.dataset.item;
+      if (!itemDataString) return;
+      try {
+        const itemData = JSON.parse(itemDataString);
+        const id = itemData.id;
+        const type = itemData.type;
+        const details = await fetchTmdbDetails(id, type);
+        if (details) showDetails(details, type);
+      } catch (err) {
+        console.error("Failed to parse item data for Details", err);
+      }
+    });
+  });
+  grid.querySelectorAll(".watch-later-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const itemDataString = btn.dataset.item;
+      if (!itemDataString) return;
+      try {
+        const itemData = JSON.parse(itemDataString);
+        const itemType = itemData.media_type || (itemData.title ? "movie" : "tv");
+        addToWatchLater(itemData, itemType);
+      } catch (err) {
+        console.error("Failed to parse item data for Watch Later", err);
+      }
+    });
+  });
+  // Esconder spinner ao terminar
+  spinner.style.display = "none";
+}
+// === FIM: Continue Watching ===
 
 function showNotification(message, type) {
   const notification = document.createElement("div");
@@ -719,6 +893,7 @@ function closeTutorial() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  renderContinueWatchingSection();
   fetchMovies("movie/now_playing", "new-movies", "movie");
   fetchMovies("tv/on_the_air", "new-series", "tv");
   fetchMovies("movie/popular", "popular-movies", "movie");
