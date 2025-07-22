@@ -52,11 +52,6 @@ function setupProfileDropdown() {
     }
 }
 
-// Theme toggle (repeated block - merged with the first one for clarity)
-// This block appears to be a duplicate or a slightly modified version of the initial theme toggle.
-// I've kept the initial one as it seems more complete with the load saved theme logic.
-// If this was intended to be separate, please clarify.
-
 const helpButton = document.querySelector(".help-button");
 if (helpButton) {
     helpButton.addEventListener("click", () =>
@@ -104,16 +99,160 @@ if (saveRealDebridSettingsButton) {
     });
 }
 
-// Load saved Real-Debrid API Token and setup dropdown on DOMContentLoaded
-document.addEventListener('DOMContentLoaded', () => {
-    const realDebridApiTokenInput = document.getElementById('realdebrid-api-token');
-    if (realDebridApiTokenInput) {
-        const savedToken = localStorage.getItem('realDebridApiToken');
-        if (savedToken) {
-            realDebridApiTokenInput.value = savedToken;
-        }
+// === INÍCIO: Firebase e Firestore para API Keys ===
+let firebaseApp, firebaseAuth, firestore, currentUser;
+let doc, setDoc, getDoc, getAuth, onAuthStateChanged;
+async function initFirebaseAndAuth() {
+  const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+  const authModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+  const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+  getAuth = authModule.getAuth;
+  onAuthStateChanged = authModule.onAuthStateChanged;
+  doc = firestoreModule.doc;
+  setDoc = firestoreModule.setDoc;
+  getDoc = firestoreModule.getDoc;
+  const firebaseConfig = {
+    apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
+    authDomain: "istreambyweb.firebaseapp.com",
+    projectId: "istreambyweb",
+    storageBucket: "istreambyweb.firebaseapp.com",
+    messagingSenderId: "458543632560",
+    appId: "1:458543632560:web:1de42763df2d1515316b75",
+    measurementId: "G-JWNQKK2ZKW"
+  };
+  if (!window.firebaseApp) {
+    if (!getApps().length) {
+      window.firebaseApp = initializeApp(firebaseConfig);
+    } else {
+      window.firebaseApp = getApps()[0];
     }
+  }
+  firebaseAuth = getAuth(window.firebaseApp);
+  firestore = firestoreModule.getFirestore(window.firebaseApp);
+  await new Promise((resolve) => {
+    onAuthStateChanged(firebaseAuth, (user) => {
+      currentUser = user;
+      resolve();
+    });
+  });
+}
+async function loadApiKeysFromFirestore() {
+  await initFirebaseAndAuth();
+  if (!currentUser) return;
+  const docRef = doc(firestore, "userApiKeys", currentUser.uid);
+  const snap = await getDoc(docRef);
+  if (snap.exists()) {
+    const data = snap.data();
+    document.getElementById('tmdb-api-key').value = data.tmdbApiKey || '';
+    document.getElementById('realdebrid-api-token').value = data.realDebridApiToken || '';
+    document.getElementById('opensubtitles-api-token').value = data.openSubtitlesApiToken || '';
+  }
+}
+async function saveApiKeysToFirestore() {
+  await initFirebaseAndAuth();
+  if (!currentUser) return;
+  const tmdbApiKey = document.getElementById('tmdb-api-key').value.trim();
+  const realDebridApiToken = document.getElementById('realdebrid-api-token').value.trim();
+  const openSubtitlesApiToken = document.getElementById('opensubtitles-api-token').value.trim();
+  const docRef = doc(firestore, "userApiKeys", currentUser.uid);
+  await setDoc(docRef, {
+    tmdbApiKey,
+    realDebridApiToken,
+    openSubtitlesApiToken
+  });
+  const notification = document.createElement('div');
+  notification.className = 'notification success';
+  notification.textContent = 'API Keys saved successfully!';
+  document.body.appendChild(notification);
+  setTimeout(() => notification.remove(), 3000);
+}
+// === Alternância de tema escuro/claro padronizada ===
+function setupThemeToggle() {
+    const themeToggleButtons = document.querySelectorAll(".theme-toggle");
+    if (!themeToggleButtons.length) return;
 
+    const applyTheme = (theme) => {
+        if (theme === "dark") {
+            document.body.classList.add("dark-theme");
+            themeToggleButtons.forEach(btn => {
+                btn.innerHTML = '<i class="fas fa-sun"></i>';
+                btn.setAttribute("data-tooltip", "Mudar para tema claro");
+            });
+        } else {
+            document.body.classList.remove("dark-theme");
+            themeToggleButtons.forEach(btn => {
+                btn.innerHTML = '<i class="fas fa-moon"></i>';
+                btn.setAttribute("data-tooltip", "Mudar para tema escuro");
+            });
+        }
+    };
+
+    themeToggleButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            const isDark = document.body.classList.toggle("dark-theme");
+            const newTheme = isDark ? "dark" : "light";
+            localStorage.setItem("theme", newTheme);
+            applyTheme(newTheme);
+        });
+    });
+
+    const savedTheme = localStorage.getItem("theme") || "light";
+    applyTheme(savedTheme);
+}
+// Proteção de autenticação: impede acesso sem login
+async function requireAuth() {
+    const firebaseConfig = {
+        apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
+        authDomain: "istreambyweb.firebaseapp.com",
+        projectId: "istreambyweb",
+        storageBucket: "istreambyweb.firebaseapp.com",
+        messagingSenderId: "458543632560",
+        appId: "1:458543632560:web:1de42763df2d1515316b75",
+        measurementId: "G-JWNQKK2ZKW"
+    };
+    const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+    if (!getApps().length) {
+        window.firebaseApp = initializeApp(firebaseConfig);
+    } else {
+        window.firebaseApp = getApps()[0];
+    }
+    const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+    if (!window.firebaseAuth) {
+        window.firebaseAuth = getAuth(firebaseApp);
+    }
+    return new Promise((resolve) => {
+        onAuthStateChanged(window.firebaseAuth, (user) => {
+            if (!user) {
+                window.location.href = "../index.html";
+            } else {
+                resolve(user);
+            }
+        });
+    });
+}
+function logout() {
+  import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js").then(({ getAuth, signOut }) => {
+    const auth = getAuth();
+    signOut(auth).then(() => {
+      window.location.href = "../index.html";
+    });
+  });
+}
+document.addEventListener('DOMContentLoaded', async () => {
+    await requireAuth();
+    setupThemeToggle();
+    await loadApiKeysFromFirestore();
     // Call the setupProfileDropdown function here to initialize the profile dropdown
     setupProfileDropdown();
+    // Botão de salvar
+    const saveApiKeysButton = document.querySelector('.save-api-keys-settings');
+    if (saveApiKeysButton) {
+      saveApiKeysButton.addEventListener('click', async () => {
+        const spinner = document.getElementById('api-keys-loading');
+        if (spinner) spinner.classList.add('active');
+        await saveApiKeysToFirestore();
+        if (spinner) spinner.classList.remove('active');
+      });
+    }
 });
+// === FIM: Firebase e Firestore para API Keys ===

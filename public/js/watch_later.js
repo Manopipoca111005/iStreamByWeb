@@ -911,41 +911,77 @@ let firebaseApp, firebaseAuth, firestore, currentUser;
 let doc, setDoc, deleteDoc, collection, getDocs;
 
 async function initFirebaseAndAuth() {
-  if (!firebaseApp) {
-    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
-    const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
-    const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-    const { getFirestore } = firestoreModule;
-    // Atribuir funções Firestore às variáveis globais
-    doc = firestoreModule.doc;
-    setDoc = firestoreModule.setDoc;
-    deleteDoc = firestoreModule.deleteDoc;
-    collection = firestoreModule.collection;
-    getDocs = firestoreModule.getDocs;
-    const firebaseConfig = {
-      apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
-      authDomain: "istreambyweb.firebaseapp.com",
-      projectId: "istreambyweb",
-      storageBucket: "istreambyweb.firebasestorage.app",
-      messagingSenderId: "458543632560",
-      appId: "1:458543632560:web:1de42763df2d1515316b75",
-      measurementId: "G-JWNQKK2ZKW"
-    };
-    firebaseApp = initializeApp(firebaseConfig);
-    firebaseAuth = getAuth(firebaseApp);
-    firestore = getFirestore(firebaseApp);
-    // Espera autenticação
-    await new Promise((resolve) => {
-      onAuthStateChanged(firebaseAuth, (user) => {
-        currentUser = user;
-        resolve();
-      });
-    });
+  const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+  const authModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+  const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+  doc = firestoreModule.doc;
+  setDoc = firestoreModule.setDoc;
+  deleteDoc = firestoreModule.deleteDoc;
+  collection = firestoreModule.collection;
+  getDocs = firestoreModule.getDocs;
+  getDoc = firestoreModule.getDoc;
+  const firebaseConfig = {
+    apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
+    authDomain: "istreambyweb.firebaseapp.com",
+    projectId: "istreambyweb",
+    storageBucket: "istreambyweb.firebaseapp.com",
+    messagingSenderId: "458543632560",
+    appId: "1:458543632560:web:1de42763df2d1515316b75",
+    measurementId: "G-JWNQKK2ZKW"
+  };
+  if (!window.firebaseApp) {
+    if (!getApps().length) {
+      window.firebaseApp = initializeApp(firebaseConfig);
+    } else {
+      window.firebaseApp = getApps()[0];
+    }
   }
+  firebaseAuth = authModule.getAuth(window.firebaseApp);
+  firestore = firestoreModule.getFirestore(window.firebaseApp);
+  await new Promise((resolve) => {
+    authModule.onAuthStateChanged(firebaseAuth, (user) => {
+      currentUser = user;
+      resolve();
+    });
+  });
 }
 // === FIM: Firebase e Firestore ===
 
+// Proteção de autenticação: impede acesso sem login
+async function requireAuth() {
+    const firebaseConfig = {
+        apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
+        authDomain: "istreambyweb.firebaseapp.com",
+        projectId: "istreambyweb",
+        storageBucket: "istreambyweb.firebaseapp.com",
+        messagingSenderId: "458543632560",
+        appId: "1:458543632560:web:1de42763df2d1515316b75",
+        measurementId: "G-JWNQKK2ZKW"
+    };
+    const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+    if (!getApps().length) {
+        window.firebaseApp = initializeApp(firebaseConfig);
+    } else {
+        window.firebaseApp = getApps()[0];
+    }
+    const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+    if (!window.firebaseAuth) {
+        window.firebaseAuth = getAuth(firebaseApp);
+    }
+    return new Promise((resolve) => {
+        onAuthStateChanged(window.firebaseAuth, (user) => {
+            if (!user) {
+                window.location.href = "../index.html";
+            } else {
+                resolve(user);
+            }
+        });
+    });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
+  await requireAuth();
+  document.body.style.display = "";
   // Apply theme immediately before loading content
   const savedTheme = localStorage.getItem("theme");
   if (savedTheme === "dark") {
@@ -1244,3 +1280,12 @@ function closeTrailerModal() {
 }
 
 // --- FIM MODIFICAÇÕES ---
+
+function logout() {
+  import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js").then(({ getAuth, signOut }) => {
+    const auth = getAuth();
+    signOut(auth).then(() => {
+      window.location.href = "../index.html";
+    });
+  });
+}

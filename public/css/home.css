@@ -127,29 +127,17 @@ body {
   transition: transform 0.3s ease;
 }
 
-.user-profile .fa-user-circle:hover {
-  transform: scale(1.2);
-}
-
-.user-profile:hover .profile-dropdown,
-.user-profile:focus-within .profile-dropdown {
-  display: block;
-}
-
+/* Removido qualquer :hover para .user-profile, .profile-dropdown, e .user-profile:hover .profile-dropdown */
 .profile-dropdown {
   display: none;
-  position: absolute;
-  top: 120%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--secondary-color, #222);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-  min-width: 140px;
-  z-index: 1002;
 }
-
 .profile-dropdown.active {
+  display: block;
+}
+.dropdown-menu {
+  display: none;
+}
+.dropdown-menu.active, .dropdown-menu.show {
   display: block;
 }
 
@@ -872,20 +860,13 @@ body {
   z-index: 1010;
 }
 
-.tooltip:hover::after {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(-50%) translateY(10px); /* Mantém a posição abaixo */
-}
+/* Removido qualquer :hover de tooltip */
 
 /* Ajusta para aparecer acima se não houver espaço abaixo */
 @media (max-height: 400px) {
   .tooltip::after {
     top: auto;
     bottom: 100%;
-    transform: translateX(-50%) translateY(-10px);
-  }
-  .tooltip:hover::after {
     transform: translateX(-50%) translateY(-10px);
   }
 }
@@ -1310,9 +1291,6 @@ body {
   .tooltip::after {
     top: auto;
     bottom: 100%;
-    transform: translateX(-50%) translateY(-10px);
-  }
-  .tooltip:hover::after {
     transform: translateX(-50%) translateY(-10px);
   }
 }

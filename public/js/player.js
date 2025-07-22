@@ -1,6 +1,6 @@
 // A API_BASE_URL deve apontar para o seu backend.
-//const API_BASE_URL = "https://api-lofru6ycsa-uc.a.run.app"; online//
-const API_BASE_URL = "http://127.0.0.1:5001/istreambyweb/us-central1/api";
+const API_BASE_URL = "https://api-lofru6ycsa-uc.a.run.app";
+//const API_BASE_URL = "http://127.0.0.1:5001/istreambyweb/us-central1/api";
 
 let videoExtensions = [".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm"];
 let incompatibleCodecs = ["h265", "hevc", "vp9", "av1"];
@@ -523,35 +523,39 @@ async function fetchTorrentioStreams(imdbId, type, season, episode) {
 let firebaseApp, firebaseAuth, firestore, currentUser;
 let doc, setDoc, collection, getDocs, getAuth, onAuthStateChanged;
 async function initFirebaseAndAuth() {
-  if (!firebaseApp) {
-    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
-    const authModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
-    const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-    getAuth = authModule.getAuth;
-    onAuthStateChanged = authModule.onAuthStateChanged;
-    doc = firestoreModule.doc;
-    setDoc = firestoreModule.setDoc;
-    collection = firestoreModule.collection;
-    getDocs = firestoreModule.getDocs;
-    const firebaseConfig = {
-      apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
-      authDomain: "istreambyweb.firebaseapp.com",
-      projectId: "istreambyweb",
-      storageBucket: "istreambyweb.firebasestorage.app",
-      messagingSenderId: "458543632560",
-      appId: "1:458543632560:web:1de42763df2d1515316b75",
-      measurementId: "G-JWNQKK2ZKW"
-    };
-    firebaseApp = initializeApp(firebaseConfig);
-    firebaseAuth = getAuth(firebaseApp);
-    firestore = firestoreModule.getFirestore(firebaseApp);
-    await new Promise((resolve) => {
-      onAuthStateChanged(firebaseAuth, (user) => {
-        currentUser = user;
-        resolve();
-      });
-    });
+  const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+  const authModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+  const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+  getAuth = authModule.getAuth;
+  onAuthStateChanged = authModule.onAuthStateChanged;
+  doc = firestoreModule.doc;
+  setDoc = firestoreModule.setDoc;
+  collection = firestoreModule.collection;
+  getDocs = firestoreModule.getDocs;
+  const firebaseConfig = {
+    apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
+    authDomain: "istreambyweb.firebaseapp.com",
+    projectId: "istreambyweb",
+    storageBucket: "istreambyweb.firebaseapp.com",
+    messagingSenderId: "458543632560",
+    appId: "1:458543632560:web:1de42763df2d1515316b75",
+    measurementId: "G-JWNQKK2ZKW"
+  };
+  if (!window.firebaseApp) {
+    if (!getApps().length) {
+      window.firebaseApp = initializeApp(firebaseConfig);
+    } else {
+      window.firebaseApp = getApps()[0];
+    }
   }
+  firebaseAuth = getAuth(window.firebaseApp);
+  firestore = firestoreModule.getFirestore(window.firebaseApp);
+  await new Promise((resolve) => {
+    onAuthStateChanged(firebaseAuth, (user) => {
+      currentUser = user;
+      resolve();
+    });
+  });
 }
 async function saveContinueWatching({ id, type, progress, runtime }) {
   await initFirebaseAndAuth();
@@ -567,7 +571,81 @@ async function saveContinueWatching({ id, type, progress, runtime }) {
 }
 // === FIM: Firebase e Firestore para Continue Watching ===
 
+// === INÍCIO: Utilitário para buscar API Keys do usuário ===
+async function getUserApiKeys() {
+  await initFirebaseAndAuth();
+  if (!currentUser) return {};
+  const docRef = doc(firestore, "userApiKeys", currentUser.uid);
+  const snap = await getDoc(docRef);
+  if (snap.exists()) {
+    return snap.data();
+  }
+  return {};
+}
+// === FIM: Utilitário para buscar API Keys do usuário ===
+
+// Substituir TMDB_API_KEY, RealDebrid, OpenSubtitles para usar a chave do usuário
+let TMDB_API_KEY = null;
+let REALDEBRID_API_TOKEN = null;
+let OPENSUBTITLES_API_TOKEN = null;
+
+async function initializeApiTokens() {
+  const apiKeys = await getUserApiKeys();
+  if (apiKeys.realDebridApiToken) {
+    REALDEBRID_API_TOKEN = apiKeys.realDebridApiToken;
+  } else {
+    console.error("Você precisa configurar seu Real-Debrid API Token nas configurações para usar o sistema!");
+  }
+  if (apiKeys.openSubtitlesApiToken) {
+    OPENSUBTITLES_API_TOKEN = apiKeys.openSubtitlesApiToken;
+  } else {
+    console.error("Você precisa configurar seu OpenSubtitles API Token nas configurações para usar o sistema!");
+  }
+}
+
+// Proteção de autenticação: impede acesso sem login
+async function requireAuth() {
+    const firebaseConfig = {
+        apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
+        authDomain: "istreambyweb.firebaseapp.com",
+        projectId: "istreambyweb",
+        storageBucket: "istreambyweb.firebaseapp.com",
+        messagingSenderId: "458543632560",
+        appId: "1:458543632560:web:1de42763df2d1515316b75",
+        measurementId: "G-JWNQKK2ZKW"
+    };
+    const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+    if (!getApps().length) {
+        window.firebaseApp = initializeApp(firebaseConfig);
+    } else {
+        window.firebaseApp = getApps()[0];
+    }
+    const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+    if (!window.firebaseAuth) {
+        window.firebaseAuth = getAuth(firebaseApp);
+    }
+    return new Promise((resolve) => {
+        onAuthStateChanged(window.firebaseAuth, (user) => {
+            if (!user) {
+                window.location.href = "../index.html";
+            } else {
+                resolve(user);
+            }
+        });
+    });
+}
+
+function logout() {
+  import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js").then(({ getAuth, signOut }) => {
+    const auth = getAuth();
+    signOut(auth).then(() => {
+      window.location.href = "../index.html";
+    });
+  });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
+  await requireAuth();
   const disablePoster = false;
   const params = new URLSearchParams(window.location.search);
   const imdbId = params.get("imdbId");

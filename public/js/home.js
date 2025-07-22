@@ -43,7 +43,6 @@ function setupProfileDropdown() {
   }
 }
 
-const TMDB_API_KEY = "f0609e6638ef2bc5b31313a712e7a8a4";
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
 
@@ -608,38 +607,56 @@ let firebaseApp, firebaseAuth, firestore, currentUser;
 let doc, setDoc, deleteDoc, collection, getDocs;
 
 async function initFirebaseAndAuth() {
-  if (!firebaseApp) {
-    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
-    const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
-    const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-    const { getFirestore } = firestoreModule;
-    // Atribuir funções Firestore às variáveis globais
-    doc = firestoreModule.doc;
-    setDoc = firestoreModule.setDoc;
-    deleteDoc = firestoreModule.deleteDoc;
-    collection = firestoreModule.collection;
-    getDocs = firestoreModule.getDocs;
-    const firebaseConfig = {
-      apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
-      authDomain: "istreambyweb.firebaseapp.com",
-      projectId: "istreambyweb",
-      storageBucket: "istreambyweb.firebasestorage.app",
-      messagingSenderId: "458543632560",
-      appId: "1:458543632560:web:1de42763df2d1515316b75",
-      measurementId: "G-JWNQKK2ZKW"
-    };
-    firebaseApp = initializeApp(firebaseConfig);
-    firebaseAuth = getAuth(firebaseApp);
-    firestore = getFirestore(firebaseApp);
-    await new Promise((resolve) => {
-      onAuthStateChanged(firebaseAuth, (user) => {
-        currentUser = user;
-        resolve();
-      });
-    });
+  const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+  const authModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+  const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+  getAuth = authModule.getAuth;
+  onAuthStateChanged = authModule.onAuthStateChanged;
+  doc = firestoreModule.doc;
+  setDoc = firestoreModule.setDoc;
+  collection = firestoreModule.collection;
+  getDocs = firestoreModule.getDocs;
+  getDoc = firestoreModule.getDoc;
+  const firebaseConfig = {
+    apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
+    authDomain: "istreambyweb.firebaseapp.com",
+    projectId: "istreambyweb",
+    storageBucket: "istreambyweb.firebaseapp.com",
+    messagingSenderId: "458543632560",
+    appId: "1:458543632560:web:1de42763df2d1515316b75",
+    measurementId: "G-JWNQKK2ZKW"
+  };
+  if (!window.firebaseApp) {
+    if (!getApps().length) {
+      window.firebaseApp = initializeApp(firebaseConfig);
+    } else {
+      window.firebaseApp = getApps()[0];
+    }
   }
+  firebaseAuth = getAuth(window.firebaseApp);
+  firestore = firestoreModule.getFirestore(window.firebaseApp);
+  await new Promise((resolve) => {
+    onAuthStateChanged(firebaseAuth, (user) => {
+      currentUser = user;
+      resolve();
+    });
+  });
 }
 // === FIM: Firebase e Firestore ===
+
+// === INÍCIO: Utilitário para buscar API Keys do usuário ===
+// Remover duplicidade: use as variáveis já declaradas globalmente
+async function getUserApiKeys() {
+  await initFirebaseAndAuth();
+  if (!currentUser) return {};
+  const docRef = doc(firestore, "userApiKeys", currentUser.uid);
+  const snap = await getDoc(docRef);
+  if (snap.exists()) {
+    return snap.data();
+  }
+  return {};
+}
+// === FIM: Utilitário para buscar API Keys do usuário ===
 
 // Substituir funções de adicionar/remover para usar Firestore
 async function addToWatchLaterFirestore(item, type) {
@@ -892,89 +909,109 @@ function closeTutorial() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  renderContinueWatchingSection();
-  fetchMovies("movie/now_playing", "new-movies", "movie");
-  fetchMovies("tv/on_the_air", "new-series", "tv");
-  fetchMovies("movie/popular", "popular-movies", "movie");
-  fetchMovies("tv/popular", "popular-series", "tv");
-  setupSearchBar();
-  setupSeriesModalEventListeners();
-
-  const themeToggle = document.querySelector(".theme-toggle");
-  if (themeToggle) {
-    themeToggle.addEventListener("click", () => {
-      document.body.classList.toggle("dark-theme");
-      const isDark = document.body.classList.contains("dark-theme");
-      localStorage.setItem("theme", isDark ? "dark" : "light");
-      themeToggle.innerHTML = `<i class="fas fa-${isDark ? "sun" : "moon"
-        }"></i>`;
+function logout() {
+  import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js").then(({ getAuth, signOut }) => {
+    const auth = getAuth();
+    signOut(auth).then(() => {
+      window.location.href = "../index.html";
     });
-    if (localStorage.getItem("theme") === "dark") {
-      document.body.classList.add("dark-theme");
-      themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
-    }
-  }
-
-  const helpButton = document.querySelector(".help-button");
-  if (helpButton)
-    helpButton.addEventListener("click", () =>
-      document.getElementById("tutorial-modal").showModal()
-    );
-
-  const getStartedButton = document.getElementById("get-started-button");
-  if (getStartedButton) {
-    getStartedButton.addEventListener("click", () => {
-      showTutorial();
-      const tutorialModal = document.getElementById("tutorial-modal");
-      if (tutorialModal && tutorialModal.hasAttribute("open")) {
-        tutorialModal.close();
-      }
-    });
-  }
-
-  async function fetchData() {
-    try {
-      const response = await fetch('https://api.consumet.org/movies/flixhq/home');
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-      const data = await response.json();
-
-      if (data && data.hasOwnProperty('streams') && Array.isArray(data.streams)) {
-        return {
-          success: true,
-          data: data.streams,
-          cacheInfo: {
-            maxAge: data.cacheMaxAge,
-            staleRevalidate: data.staleRevalidate,
-            staleError: data.staleError
-          }
-        };
-      } else {
-        console.warn('Unexpected data structure:', data);
-        return { success: false, error: 'Invalid data structure' };
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', async () => {
-    try {
-      // showLoadingSpinner(); // Remova esta linha se showLoadingSpinner não estiver definida
-      const result = await fetchData();
-
-      if (result.success && result.data) {
-        // displayMovies(result.data); // Remova esta linha se displayMovies não estiver definida
-      } else {
-        // showError('Não foi possível carregar o conteúdo.'); // Remova esta linha se showError não estiver definida
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      // showError('Erro ao carregar conteúdo.'); // Remova esta linha se showError não estiver definida
-    } finally {
-      // hideLoadingSpinner(); // Remova esta linha se hideLoadingSpinner não estiver definida
-    }
   });
+}
+
+let TMDB_API_KEY = null;
+
+async function initializeAppWithUserApiKeys() {
+  const apiKeys = await getUserApiKeys();
+  if (apiKeys.tmdbApiKey) {
+    TMDB_API_KEY = apiKeys.tmdbApiKey;
+    // Só chama as funções se a key existe!
+    renderContinueWatchingSection();
+    fetchMovies("movie/now_playing", "new-movies", "movie");
+    fetchMovies("tv/on_the_air", "new-series", "tv");
+    fetchMovies("movie/popular", "popular-movies", "movie");
+    fetchMovies("tv/popular", "popular-series", "tv");
+    setupSearchBar();
+    setupSeriesModalEventListeners();
+  } else {
+    showNotification("Você precisa configurar sua TMDB API Key nas configurações para usar o sistema!", "error");
+  }
+}
+
+// NOVA FUNÇÃO: Alternância de tema escuro/claro
+function setupThemeToggle() {
+  const themeToggleButton = document.querySelector(".theme-toggle");
+  if (!themeToggleButton) return;
+
+  const applyTheme = (theme) => {
+    if (theme === "dark") {
+      document.body.classList.add("dark-theme");
+      themeToggleButton.innerHTML = '<i class="fas fa-sun"></i>';
+      themeToggleButton.setAttribute("data-tooltip", "Mudar para tema claro");
+    } else {
+      document.body.classList.remove("dark-theme");
+      themeToggleButton.innerHTML = '<i class="fas fa-moon"></i>';
+      themeToggleButton.setAttribute("data-tooltip", "Mudar para tema escuro");
+    }
+  };
+
+  themeToggleButton.addEventListener("click", () => {
+    const isDark = document.body.classList.toggle("dark-theme");
+    const newTheme = isDark ? "dark" : "light";
+    localStorage.setItem("theme", newTheme);
+    applyTheme(newTheme);
+  });
+
+  const savedTheme = localStorage.getItem("theme") || "light";
+  applyTheme(savedTheme);
+}
+
+// Proteção de autenticação: impede acesso sem login
+async function requireAuth() {
+    const firebaseConfig = {
+        apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
+        authDomain: "istreambyweb.firebaseapp.com",
+        projectId: "istreambyweb",
+        storageBucket: "istreambyweb.firebaseapp.com",
+        messagingSenderId: "458543632560",
+        appId: "1:458543632560:web:1de42763df2d1515316b75",
+        measurementId: "G-JWNQKK2ZKW"
+    };
+    const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+    if (!getApps().length) {
+        window.firebaseApp = initializeApp(firebaseConfig);
+    } else {
+        window.firebaseApp = getApps()[0];
+    }
+    const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+    if (!window.firebaseAuth) {
+        window.firebaseAuth = getAuth(firebaseApp);
+    }
+    return new Promise((resolve) => {
+        onAuthStateChanged(window.firebaseAuth, (user) => {
+            if (!user) {
+                window.location.href = "../index.html";
+            } else {
+                resolve(user);
+            }
+        });
+    });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+    await requireAuth();
+    setupThemeToggle();
+    setupProfileDropdown();
+    initializeAppWithUserApiKeys();
+  // showLoadingSpinner(); // Remova esta linha se showLoadingSpinner não estiver definida
+  // const result = await fetchData(); // Remova esta linha se fetchData não estiver definida
+  // if (result.success && result.data) { // Remova esta linha se displayMovies não estiver definida
+  //   // displayMovies(result.data); // Remova esta linha se displayMovies não estiver definida
+  // } else { // Remova esta linha se showError não estiver definida
+  //   // showError('Não foi possível carregar o conteúdo.'); // Remova esta linha se showError não estiver definida
+  // }
+  // } catch (error) { // Remova esta linha se showError não estiver definida
+  //   console.error('Error:', error); // Remova esta linha se showError não estiver definida
+  // } finally { // Remova esta linha se hideLoadingSpinner não estiver definida
+  //   // hideLoadingSpinner(); // Remova esta linha se hideLoadingSpinner não estiver definida
+  // }
 });

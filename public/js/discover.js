@@ -1,4 +1,3 @@
-const TMDB_API_KEY = "f0609e6638ef2bc5b31313a712e7a8a4";
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
 const ORIGINAL_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/original";
@@ -535,41 +534,57 @@ function closeTrailerModal() {
 
 // === INÍCIO: Firebase e Firestore ===
 let firebaseApp, firebaseAuth, firestore, currentUser;
-let doc, setDoc, deleteDoc, collection, getDocs;
+let doc, setDoc, deleteDoc, collection, getDocs, getDoc;
 
 async function initFirebaseAndAuth() {
-  if (!firebaseApp) {
-    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
-    const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
-    const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-    const { getFirestore } = firestoreModule;
-    // Atribuir funções Firestore às variáveis globais
-    doc = firestoreModule.doc;
-    setDoc = firestoreModule.setDoc;
-    deleteDoc = firestoreModule.deleteDoc;
-    collection = firestoreModule.collection;
-    getDocs = firestoreModule.getDocs;
-    const firebaseConfig = {
-      apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
-      authDomain: "istreambyweb.firebaseapp.com",
-      projectId: "istreambyweb",
-      storageBucket: "istreambyweb.firebasestorage.app",
-      messagingSenderId: "458543632560",
-      appId: "1:458543632560:web:1de42763df2d1515316b75",
-      measurementId: "G-JWNQKK2ZKW"
-    };
-    firebaseApp = initializeApp(firebaseConfig);
-    firebaseAuth = getAuth(firebaseApp);
-    firestore = getFirestore(firebaseApp);
-    await new Promise((resolve) => {
-      onAuthStateChanged(firebaseAuth, (user) => {
-        currentUser = user;
-        resolve();
-      });
-    });
+  const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+  const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+  const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+  doc = firestoreModule.doc;
+  setDoc = firestoreModule.setDoc;
+  deleteDoc = firestoreModule.deleteDoc;
+  collection = firestoreModule.collection;
+  getDocs = firestoreModule.getDocs;
+  getDoc = firestoreModule.getDoc;
+  const firebaseConfig = {
+    apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
+    authDomain: "istreambyweb.firebaseapp.com",
+    projectId: "istreambyweb",
+    storageBucket: "istreambyweb.firebaseapp.com",
+    messagingSenderId: "458543632560",
+    appId: "1:458543632560:web:1de42763df2d1515316b75",
+    measurementId: "G-JWNQKK2ZKW"
+  };
+  if (!window.firebaseApp) {
+    if (!getApps().length) {
+      window.firebaseApp = initializeApp(firebaseConfig);
+    } else {
+      window.firebaseApp = getApps()[0];
+    }
   }
+  firebaseAuth = getAuth(window.firebaseApp);
+  firestore = firestoreModule.getFirestore(window.firebaseApp);
+  await new Promise((resolve) => {
+    onAuthStateChanged(firebaseAuth, (user) => {
+      currentUser = user;
+      resolve();
+    });
+  });
 }
 // === FIM: Firebase e Firestore ===
+
+// === INÍCIO: Utilitário para buscar API Keys do usuário ===
+async function getUserApiKeys() {
+  await initFirebaseAndAuth();
+  if (!currentUser) return {};
+  const docRef = doc(firestore, "userApiKeys", currentUser.uid);
+  const snap = await getDoc(docRef);
+  if (snap.exists()) {
+    return snap.data();
+  }
+  return {};
+}
+// === FIM: Utilitário para buscar API Keys do usuário ===
 
 // Substituir funções de adicionar/remover para usar Firestore
 async function addToWatchLaterFirestore(item, type) {
@@ -887,24 +902,74 @@ async function setupFeaturedContent() {
 const REAL_DEBRID_TOKEN =
   "2RHUYGEFBFKUNIKQSUDID2NUIG4MDBOWRD2AFQL3Y6ZOVISI7OSQ";
 
-document.addEventListener("DOMContentLoaded", () => {
-  setupThemeToggle();
-  setupSidebarToggle();
-  setupProfileDropdown();
-  setupBackToTopButton();
-  setupHelpButton();
-  setupSearchBar();
-  setupKeyboardNavigation();
-  setupFeaturedContent();
-  setupSeriesModalEventListeners();
+let TMDB_API_KEY = null;
 
+async function initializeDiscoverWithUserApiKeys() {
+  const apiKeys = await getUserApiKeys();
+  if (apiKeys.tmdbApiKey) {
+    TMDB_API_KEY = apiKeys.tmdbApiKey;
+    // Só chama as funções se a key existe!
+    fetchGenres();
+    fetchMovies("movie/popular", "movie-grid");
+    // ...outras funções que dependem da key...
+  } else {
+    showNotification("Você precisa configurar sua TMDB API Key nas configurações para usar o sistema!", "error");
+  }
+}
 
-  fetchGenres();
-  fetchMovies(
-    `${state.currentFilter.type}/${state.currentFilter.sort}`,
-    "movie-grid",
-    state.currentFilter.type
-  );
+// Proteção de autenticação: impede acesso sem login
+async function requireAuth() {
+    const firebaseConfig = {
+        apiKey: "AIzaSyCqfBDHkKEsHSzdb5KTvagYwoEk1b3da3o",
+        authDomain: "istreambyweb.firebaseapp.com",
+        projectId: "istreambyweb",
+        storageBucket: "istreambyweb.firebaseapp.com",
+        messagingSenderId: "458543632560",
+        appId: "1:458543632560:web:1de42763df2d1515316b75",
+        measurementId: "G-JWNQKK2ZKW"
+    };
+    const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+    if (!getApps().length) {
+        window.firebaseApp = initializeApp(firebaseConfig);
+    } else {
+        window.firebaseApp = getApps()[0];
+    }
+    const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+    if (!window.firebaseAuth) {
+        window.firebaseAuth = getAuth(firebaseApp);
+    }
+    return new Promise((resolve) => {
+        onAuthStateChanged(window.firebaseAuth, (user) => {
+            if (!user) {
+                window.location.href = "../index.html";
+            } else {
+                resolve(user);
+            }
+        });
+    });
+}
+
+function logout() {
+  import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js").then(({ getAuth, signOut }) => {
+    const auth = getAuth();
+    signOut(auth).then(() => {
+      window.location.href = "../index.html";
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+    await requireAuth();
+    initializeDiscoverWithUserApiKeys();
+    setupThemeToggle();
+    setupSidebarToggle();
+    setupProfileDropdown();
+    setupBackToTopButton();
+    setupHelpButton();
+    setupSearchBar();
+    setupKeyboardNavigation();
+    setupFeaturedContent();
+    setupSeriesModalEventListeners();
 });
 
 window.toggleDropdown = toggleDropdown;
